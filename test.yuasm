@@ -10,17 +10,17 @@ comment*/
 .main:
 loadm 0x0 0x12      // semicolons are optional
 loadm 0x1 twelve    // macro usage for parameter
-muldd 0x2, 0x0, 0x1 // commas or spaces can be used to delimit parameters
+adddd 0x2, 0x0, 0x1 // commas or spaces can be used to delimit parameters
 
 second() // call a function
-muldd 0x0,0x1 ,  0x3 // comma and space placement is flexible
+addmm 0x0,0x1 ,  0x3 // comma and space placement is flexible
 my_func()
 
-#define asdf hello
+#define asdf hi
 
-addmm 0x1  0x3  0x9;
+subdd 0x1  0x3  0x9;
 
-#define hello muldd
+#define hello submm
 hello 0x1 twelve 0x8
 
 end

@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <cmath>
 
 Yuasm::Yuasm(std::string first_fname) {
     if (open_new_file(first_fname) == 0) {
@@ -437,22 +438,14 @@ int Yuasm::mainloop() {
                     case LF:
                     case CR: { // these are invalid, we expect a parameter
                         std::string instr(buffer0.begin(), buffer0.end());
-                        if (get_no_of_params_for_instr(instr) == 0) {
-
-                            if (DEBUG_LEVEL >= 1) {
-                                std::cout << "# Instruction Complete #\n";
-                                std::cout << "Instruction: " << instr << "\n\n";
-                            }
-                            
-                            buffer0.clear();
-                            pc++;
-                            state = SCAN_FIRST;
-                            break;
-                        } else {
-                            std::cout << "Error: expected identifier\n";
+                        if (eval_instr(instr, params) != 0) {
                             return 1;
                         }
-                        
+
+                        buffer0.clear();
+                        pc++;
+                        state = SCAN_FIRST;
+                        break;
                     }
                     
                     case AL: { // scan the name
@@ -475,7 +468,7 @@ int Yuasm::mainloop() {
                         expand_macro(&buffer0, macros);
 
                         std::string buffer_str(buffer0.begin(), buffer0.end());
-                        if (is_valid_instr(buffer_str)) {
+                        if (get_no_of_params_for_instr(buffer_str) >= 0) { // means instruction is valid
                             state = SCAN_PARAMS;
                         } else {
                             std::cerr << "Error: invalid instruction\n";
@@ -547,9 +540,7 @@ int Yuasm::mainloop() {
                                 offset = -1;
                             }
 
-                            // First check if it's a macro expansion
-                            expand_macro(&buffer1, macros);
-
+                            expand_macro(&buffer1, macros); // Check if it's a macro expansion
                             std::string param(buffer1.begin(), buffer1.end() + offset);
                             params.push_back(param);
                             buffer1.clear();
@@ -559,16 +550,9 @@ int Yuasm::mainloop() {
                             }
                         }
 
-                        // Moving on
                         std::string instr(buffer0.begin(), buffer0.end());
-
-                        if (DEBUG_LEVEL >= 1) {
-                            std::cout << "# Instruction Complete #\n";
-                            std::cout << "Instruction: " << instr << "\n";
-                            for (int i=0; i<params.size(); i++) {
-                                std::cout << "Parameter: " << params[i] << "\n";
-                            }
-                            std::cout << "\n";
+                        if (eval_instr(instr, params) != 0) {
+                            return 1;
                         }
 
                         buffer0.clear();
@@ -659,9 +643,7 @@ int Yuasm::mainloop() {
                     case SLASH: {
                         // Check if another parameter needs to be added
                         if (buffer1.size() > 0) {
-                            // Check if it's a macro expansion
-                            expand_macro(&buffer1, macros);
-
+                            expand_macro(&buffer1, macros); // Check if it's a macro expansion
                             std::string param(buffer1.begin(), buffer1.end());
                             params.push_back(param);
                             used_comma = true;
@@ -674,14 +656,8 @@ int Yuasm::mainloop() {
 
                         // Moving on
                         std::string instr(buffer0.begin(), buffer0.end());
-
-                        if (DEBUG_LEVEL >= 1) {
-                            std::cout << "# Instruction Complete #\n";
-                            std::cout << "Instruction: " << instr << "\n";
-                            for (int i=0; i<params.size(); i++) {
-                                std::cout << "Parameter: " << params[i] << "\n";
-                            }
-                            std::cout << "\n";
+                        if (eval_instr(instr, params) != 0) {
+                            return 1;
                         }
 
                         buffer0.clear();
@@ -701,7 +677,6 @@ int Yuasm::mainloop() {
                 break;
             }
         }
-
     }
 
     if (DEBUG_LEVEL >= 1) {
@@ -722,6 +697,291 @@ int Yuasm::mainloop() {
     return 0;
 }
 
+int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
+    if (DEBUG_LEVEL >= 1) {
+        std::cout << "# Instruction Complete #\n";
+        std::cout << "Instruction: " << instr << "\n";
+        for (int i=0; i<params.size(); i++) {
+            std::cout << "Parameter: " << params[i] << "\n";
+        }
+        std::cout << "\n";
+    }
+
+    int no_of_params = get_no_of_params_for_instr(instr);
+    if (no_of_params < 0) {
+        std::cerr << "Error: invalid instruction: " << instr << "\n";
+        return 1;
+    }
+
+    if (no_of_params != params.size()) {
+        std::cerr << "Error: expected " << no_of_params << " arguments, got " << params.size() << "\n";
+        return 1;
+    }
+
+    // General Rules:
+    // Valid register values are 0 to 255 (inclusively)
+    // Rules are not being enforced at the moment
+
+    if (instr == "loadm") {
+        // Arguments: rd, val
+        // val is 16 bits
+
+        int rd = param_to_int(params[0]);
+        int val = param_to_int(params[1]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Load Immediate, rd=" << rd << ", val=" << val << "\n";
+        }
+        
+    } else if (instr == "loadd") {
+        // Arguments: rd, addr
+        // addr is 16 bits
+
+        int rd = param_to_int(params[0]);
+        int addr = param_to_int(params[1]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Load Direct, rd=" << rd << ", addr=" << addr << "\n";
+        }
+    } else if (instr == "storem") {
+        // Arguments: addr, val
+        // addr and val are both 12 bits
+
+        int addr = param_to_int(params[0]);
+        int val = param_to_int(params[1]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Store Immediate, addr=" << addr << ", val=" << val << "\n";
+        }
+    } else if (instr == "stored") {
+        // Arguments: addr, rs
+        // val is 16 bits
+
+        int addr = param_to_int(params[0]);
+        int rs = param_to_int(params[1]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Store Direct, addr=" << addr << ", rs=" << rs << "\n";
+        }
+    } else if (instr == "addmm") {
+        // Arguments: rd, val1, val2
+        // val is 16 bits
+
+        int rd = param_to_int(params[0]);
+        int val1 = param_to_int(params[1]);
+        int val2 = param_to_int(params[2]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Add Immediate, rd=" << rd << ", val1=" << val1 << ", val2=" << val2 << "\n";
+        }
+    } else if (instr == "adddd") {
+        // Arguments: rd, rs1, rs2
+        // val is 16 bits
+
+        int rd = param_to_int(params[0]);
+        int rs1 = param_to_int(params[1]);
+        int rs2 = param_to_int(params[2]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Add Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+        }
+    } else if (instr == "submm") {
+        // Arguments: rd, val1, val2
+        // val is 16 bits
+
+        int rd = param_to_int(params[0]);
+        int val1 = param_to_int(params[1]);
+        int val2 = param_to_int(params[2]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Subtract Immediate, rd=" << rd << ", val1=" << val1 << ", val2=" << val2 << "\n";
+        }
+    } else if (instr == "subdd") {
+        // Arguments: rd, rs1, rs2
+        // val is 16 bits
+
+        int rd = param_to_int(params[0]);
+        int rs1 = param_to_int(params[1]);
+        int rs2 = param_to_int(params[2]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Subtract Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+        }
+    } else if (instr == "ltd") {
+        // Arguments: rd, rs1, rs2
+
+        int rd = param_to_int(params[0]);
+        int rs1 = param_to_int(params[1]);
+        int rs2 = param_to_int(params[2]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Less Than Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+        }
+    } else if (instr == "lted") {
+        // Arguments: rd, rs1, rs2
+
+        int rd = param_to_int(params[0]);
+        int rs1 = param_to_int(params[1]);
+        int rs2 = param_to_int(params[2]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Less Than or Equal To Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+        }
+    } else if (instr == "gtd") {
+        // Arguments: rd, rs1, rs2
+
+        int rd = param_to_int(params[0]);
+        int rs1 = param_to_int(params[1]);
+        int rs2 = param_to_int(params[2]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Greater Than Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+        }
+    } else if (instr == "gted") {
+        // Arguments: rd, rs1, rs2
+
+        int rd = param_to_int(params[0]);
+        int rs1 = param_to_int(params[1]);
+        int rs2 = param_to_int(params[2]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Greater Than or Equal To Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+        }
+    } else if (instr == "eqd") {
+        // Arguments: rd, rs1, rs2
+
+        int rd = param_to_int(params[0]);
+        int rs1 = param_to_int(params[1]);
+        int rs2 = param_to_int(params[2]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Equal To Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+        }
+    } else if (instr == "jumpm") {
+        // Arguments: val
+        // val might be a function name
+
+        int val = 0;
+        std::string val_str = params[0];
+        if (!is_numeric(val_str[0])) {
+            // See if it's a function
+            int func_index = get_function_index(val_str);
+            if (func_index < 0) {
+                std::cerr << "Error: invalid function name\n";
+                return 1;
+            } else {
+                val = func_index;
+            }
+        } else {
+            val = param_to_int(params[0]);
+        }
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Jump Immediate, val=" << val << "\n";
+        }
+    } else if (instr == "jumpd") {
+        // Arguments: rs
+
+        int rs = param_to_int(params[0]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Jump Direct, rs=" << rs << "\n";
+        }
+    } else if (instr == "jumpifm") {
+        // Arguments: val, rcond
+
+        int val = 0;
+        std::string val_str = params[0];
+        if (!is_numeric(val_str[0])) {
+            // See if it's a function
+            int func_index = get_function_index(val_str);
+            if (func_index < 0) {
+                std::cerr << "Error: invalid function name\n";
+                return 1;
+            } else {
+                val = func_index;
+            }
+        } else {
+            val = param_to_int(params[0]);
+        }
+
+        int rcond = param_to_int(params[1]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Jump If Immediate, val=" << val << ", rcond=" << rcond << "\n";
+        }
+    } else if (instr == "jumpifd") {
+        // Arguments: rs, rcond
+
+        int rs = param_to_int(params[0]);
+        int rcond = param_to_int(params[1]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Jump If Direct, rs=" << rs << ", rcond=" << rcond << "\n";
+        }
+    } else if (instr == "end") {
+        // Arguments: none
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "End\n";
+        }
+    }
+
+    return 0;
+}
+
+int Yuasm::param_to_int(std::string param) {
+    int res = 0;
+
+    // Determine radix
+    int radix = 10; // decimal, hex, binary (octal not supported)
+    if (param.size() > 2) {
+        if (param[0] == '0' && param[1] == 'x') {
+            radix = 16;
+            for (char& c : param) { // convert to uppercase
+                c = std::toupper(static_cast<unsigned char>(c));
+            }
+        } else if (param[0] == '0' && param[1] == 'b') {
+            radix = 2;
+        }
+    }
+
+    int limit = 0;
+    if (radix != 10) {
+        limit = 2;
+    }
+    int di = 0; // digit index
+    for (int i=param.size()-1; i>limit-1; i--) {
+        char digit_char = param[i];
+
+        int digit_value;
+        if (radix == 10) {
+            if (!is_numeric(digit_char)) {
+                std::cerr << "Error: invalid decimal number: " << param << "\n";
+                return 0; // TODO handle properly
+            }
+            digit_value = digit_char - '0';
+        } else if (radix == 16) {
+            if (!is_hex_digit(digit_char)) {
+                std::cerr << "Error: invalid hexadecimal number: " << param << "\n";
+                return 0; // TODO handle properly
+            }
+            digit_value = get_hex_value(digit_char);
+        } else if (radix == 2) {
+            if (digit_char != '0' && digit_char != '1') {
+                std::cerr << "Error: invalid binary number: " << param << "\n";
+                return 0; // TODO handle properly
+            }
+            digit_value = digit_char - '0';
+        }
+
+        res += digit_value * std::pow(radix, di);
+        di++;
+    }
+
+    return res;
+}
+
 int Yuasm::open_new_file(std::string fname) {
     std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>(fname);
     if (!(*file)) {
@@ -740,6 +1000,14 @@ void Yuasm::expand_macro(std::vector<char>* buffer, std::map<std::string, std::s
         //*buffer = substituted_value_vector;
         buffer->assign(expansion.begin(), expansion.end());
     }
+}
+
+int Yuasm::get_function_index(std::string func) {
+    if (functions.find(func) != functions.end()) {
+        int index = functions[func];
+        return index;
+    }
+    return -1;
 }
 
 const int Yuasm::get_category(char ch) {
@@ -794,17 +1062,59 @@ std::string Yuasm::print_state() {
     }
 }
 
-bool Yuasm::is_valid_instr(std::string instr) {
-    return true;
-}
-
 int Yuasm::get_no_of_params_for_instr(std::string instr) {
     if (instr == "loadm") {
         return 2;
-    } else if (instr == "muldd") {
+    } else if (instr == "loadd") {
+        return 2;
+    } else if (instr == "storem") {
+        return 2;
+    } else if (instr == "stored") {
+        return 2;
+    } else if (instr == "addmm") {
         return 3;
+    } else if (instr == "adddd") {
+        return 3;
+    } else if (instr == "submm") {
+        return 3;
+    } else if (instr == "subdd") {
+        return 3;
+    } else if (instr == "ltd") {
+        return 3;
+    } else if (instr == "lted") {
+        return 3;
+    } else if (instr == "gtd") {
+        return 3;
+    } else if (instr == "gted") {
+        return 3;
+    } else if (instr == "eqd") {
+        return 3;
+    } else if (instr == "jumpm") {
+        return 1;
+    } else if (instr == "jumpd") {
+        return 1;
+    } else if (instr == "jumpifm") {
+        return 2;
+    } else if (instr == "jumpifd") {
+        return 2;
     } else if (instr == "end") {
         return 0;
     }
-    return 0;
+    return -1;
+}
+
+bool Yuasm::is_hex_digit(char c) { // parameter must be uppercase
+    return (is_numeric(c) || c == 'A' || c == 'B' || c == 'C' || c == 'D' || c == 'E' || c == 'F');
+}
+
+int Yuasm::get_hex_value(char c) { // parameter must be uppercase and a valid hex digit
+    if (c == 'A') {return 10;}
+    else if (c == 'B') {return 11;}
+    else if (c == 'C') {return 12;}
+    else if (c == 'D') {return 13;}
+    else if (c == 'E') {return 14;}
+    else if (c == 'F') {return 15;}
+    else {
+        return c - '0';
+    }
 }

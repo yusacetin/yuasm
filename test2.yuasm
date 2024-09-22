@@ -1,12 +1,16 @@
-#define my_instr lt
+#define my_instr ltd
 #define my_num0    3
 #define my_num1 9
 
 #define my_target 0x4
 
+jumpm 9;
 
 .exec:
 my_instr my_num0 my_num1 my_target
 
 . other_func :
-jumpif my_target exec
+jumpifd my_target exec
+
+
+end

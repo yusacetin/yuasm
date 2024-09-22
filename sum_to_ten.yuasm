@@ -1,0 +1,19 @@
+#define res 0
+#define cur 1
+#define limit 2
+#define one 3
+#define cond 4
+#define final_res 0x0100
+
+.main:
+loadm res 0 // result starts as zero
+loadm cur 1 // current value starts as zero
+loadm limit 10 // count until 10
+loadm one 1 // the constant value one (because adddm is not supported for now)
+
+.loop:
+adddd res res cur // add current value to result
+adddd cur cur one // increment current value by one
+lted cond cur limit // check if cur is less than or equal to the limit
+jumpifm loop cond // loop if cur < limit
+stored final_res res // now the final result is saved to the address final_res

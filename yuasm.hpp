@@ -10,7 +10,7 @@ class Yuasm {
         Yuasm(std::string first_fname);
 
     private:
-        const int DEBUG_LEVEL = 1; // 0: nothing, 1: state completions, 2: full info
+        const int DEBUG_LEVEL = 0; // 0: instr info, 1: state completions, 2: full info
 
         enum State {
             SCAN_FIRST,
@@ -66,11 +66,15 @@ class Yuasm {
         int open_new_file(std::string fname);
         int mainloop();
         std::string print_state();
-        bool is_valid_instr(std::string instr);
-        int get_no_of_params_for_instr(std::string instr);
+        int eval_instr(std::string instr, std::vector<std::string> params);
+        int get_function_index(std::string func);
 
         static void expand_macro(std::vector<char>* buffer, std::map<std::string, std::string> macro_list);
         static const int get_category(char ch);
         static bool is_alphabetic(char ch);
         static bool is_numeric(char ch);
+        static int get_no_of_params_for_instr(std::string instr); // returns -1 if instruction is invalid
+        static int param_to_int(std::string param);
+        static bool is_hex_digit(char c);
+        static int get_hex_value(char c);
 };

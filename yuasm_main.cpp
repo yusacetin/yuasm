@@ -1,6 +1,6 @@
 #include "yuasm.hpp"
 
 int main() {
-    Yuasm yuasm("test2.yuasm");
+    Yuasm yuasm("sum_to_ten.yuasm");
     return 0;
 }
