@@ -1,6 +1,6 @@
 #define ten 10
 
-.compare:
+.    compare :
 loadm ten 0xB
-loadm 11 0xC
+loadm 11 0xC // another line commment
 gtedd 0xB 0xC 0xD

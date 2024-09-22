@@ -1,0 +1,1 @@
+g++ yuasm_main.cpp yuasm.cpp -o yuasm
