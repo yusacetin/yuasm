@@ -56,7 +56,7 @@ class Yuasm {
 
         std::stack<std::unique_ptr<std::ifstream>> files;
         std::map<std::string, std::string> macros;
-        std::map<std::string, int> functions;
+        std::map<std::string, int> functions; // should be called sections really
         int pc = 0; // program counter
 
         int state_before_block_comment; // TODO not properly implemented

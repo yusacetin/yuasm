@@ -1,6 +1,0 @@
-#define ten 10
-
-.    compare :
-loadm ten 0xB
-loadm 11 0xC // another line commment
-gted 0xB 0xC 0xD

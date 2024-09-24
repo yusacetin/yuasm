@@ -1,17 +1,19 @@
-loadm rd val: load immediate
-loadd rd addr: load direct 
-storem addr val: store immediate
-stored addr rs: store direct
-addmm rd val1 val2: add immediate, store to rd
-adddd rd rs1 rs2: add direct, store to rd
-submm rd val1 val2: subtract immediate, store to rd
-subdd rd rs1 rs2: subtract direct, store to rd
-ltd rd rs1 rs2: less than direct
-lted rd rs1 rs2: less than or equal to direct
-gtd rd rs1 rs2: greater than direct
-gted rd rs1 rs2: greater than or equal to direct
-eqd rd rs1 rs2: equal to direct
-jumpm val: unconditionally jump to val
-jumpd rs: unconditionally jump to value at rs
-jumpifm val rcond: jump to val if cond>0
-jumpifd rs rcond: jump to value at rs if cond>0
+loadimm rd val: load immediate
+loaddir rd addr: load direct 
+
+store addr rs: store direct
+
+add rd rs1 rs2: add, store to rd
+sub rd rs1 rs2: subtract, store to rd
+
+lt rd rs1 rs2: less than
+lte rd rs1 rs2: less than or equal to
+gt rd rs1 rs2: greater than
+gte rd rs1 rs2: greater than or equal to
+eq rd rs1 rs2: equal to
+
+jump val: unconditionally jump to section val (same as calling doing val())
+jumpdir rs: unconditionally jump to val at rs
+
+jumpif val rcond: jump to section val if cond>0
+jumpifdir rs rcond: jump to val at rs if cond>0

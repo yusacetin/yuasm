@@ -666,6 +666,7 @@ int Yuasm::mainloop() {
                         used_comma = false;
                         pc++;
                         state = COMMENT_SCAN_BEGIN;
+                        state_before_block_comment = SCAN_FIRST; // TODO maybe implement a way to put block comments between parameters
                         break;
                     }
 
@@ -722,7 +723,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     // Valid register values are 0 to 255 (inclusively)
     // Rules are not being enforced at the moment
 
-    if (instr == "loadm") {
+    if (instr == "loadimm") {
         // Arguments: rd, val
         // val is 16 bits
 
@@ -733,7 +734,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
             std::cout << "Load Immediate, rd=" << rd << ", val=" << val << "\n";
         }
         
-    } else if (instr == "loadd") {
+    } else if (instr == "loaddir") {
         // Arguments: rd, addr
         // addr is 16 bits
 
@@ -743,71 +744,16 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Load Direct, rd=" << rd << ", addr=" << addr << "\n";
         }
-    } else if (instr == "storem") {
-        // Arguments: addr, val
-        // addr and val are both 12 bits
-
-        int addr = param_to_int(params[0]);
-        int val = param_to_int(params[1]);
-
-        if (DEBUG_LEVEL >= 0) {
-            std::cout << "Store Immediate, addr=" << addr << ", val=" << val << "\n";
-        }
-    } else if (instr == "stored") {
+    } else if (instr == "store") {
         // Arguments: addr, rs
-        // val is 16 bits
 
         int addr = param_to_int(params[0]);
         int rs = param_to_int(params[1]);
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Store Direct, addr=" << addr << ", rs=" << rs << "\n";
+            std::cout << "Store, addr=" << addr << ", rs=" << rs << "\n";
         }
-    } else if (instr == "addmm") {
-        // Arguments: rd, val1, val2
-        // val is 16 bits
-
-        int rd = param_to_int(params[0]);
-        int val1 = param_to_int(params[1]);
-        int val2 = param_to_int(params[2]);
-
-        if (DEBUG_LEVEL >= 0) {
-            std::cout << "Add Immediate, rd=" << rd << ", val1=" << val1 << ", val2=" << val2 << "\n";
-        }
-    } else if (instr == "adddd") {
-        // Arguments: rd, rs1, rs2
-        // val is 16 bits
-
-        int rd = param_to_int(params[0]);
-        int rs1 = param_to_int(params[1]);
-        int rs2 = param_to_int(params[2]);
-
-        if (DEBUG_LEVEL >= 0) {
-            std::cout << "Add Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
-        }
-    } else if (instr == "submm") {
-        // Arguments: rd, val1, val2
-        // val is 16 bits
-
-        int rd = param_to_int(params[0]);
-        int val1 = param_to_int(params[1]);
-        int val2 = param_to_int(params[2]);
-
-        if (DEBUG_LEVEL >= 0) {
-            std::cout << "Subtract Immediate, rd=" << rd << ", val1=" << val1 << ", val2=" << val2 << "\n";
-        }
-    } else if (instr == "subdd") {
-        // Arguments: rd, rs1, rs2
-        // val is 16 bits
-
-        int rd = param_to_int(params[0]);
-        int rs1 = param_to_int(params[1]);
-        int rs2 = param_to_int(params[2]);
-
-        if (DEBUG_LEVEL >= 0) {
-            std::cout << "Subtract Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
-        }
-    } else if (instr == "ltd") {
+    } else if (instr == "add") {
         // Arguments: rd, rs1, rs2
 
         int rd = param_to_int(params[0]);
@@ -815,9 +761,9 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         int rs2 = param_to_int(params[2]);
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Less Than Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+            std::cout << "Add, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
         }
-    } else if (instr == "lted") {
+    } else if (instr == "sub") {
         // Arguments: rd, rs1, rs2
 
         int rd = param_to_int(params[0]);
@@ -825,9 +771,9 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         int rs2 = param_to_int(params[2]);
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Less Than or Equal To Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+            std::cout << "Subtract, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
         }
-    } else if (instr == "gtd") {
+    } else if (instr == "lt") {
         // Arguments: rd, rs1, rs2
 
         int rd = param_to_int(params[0]);
@@ -835,9 +781,9 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         int rs2 = param_to_int(params[2]);
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Greater Than Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+            std::cout << "Less Than, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
         }
-    } else if (instr == "gted") {
+    } else if (instr == "lte") {
         // Arguments: rd, rs1, rs2
 
         int rd = param_to_int(params[0]);
@@ -845,9 +791,9 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         int rs2 = param_to_int(params[2]);
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Greater Than or Equal To Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+            std::cout << "Less Than or Equal To, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
         }
-    } else if (instr == "eqd") {
+    } else if (instr == "gt") {
         // Arguments: rd, rs1, rs2
 
         int rd = param_to_int(params[0]);
@@ -855,9 +801,29 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         int rs2 = param_to_int(params[2]);
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Equal To Direct, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+            std::cout << "Greater Than, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
         }
-    } else if (instr == "jumpm") {
+    } else if (instr == "gte") {
+        // Arguments: rd, rs1, rs2
+
+        int rd = param_to_int(params[0]);
+        int rs1 = param_to_int(params[1]);
+        int rs2 = param_to_int(params[2]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Greater Than or Equal To, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+        }
+    } else if (instr == "eq") {
+        // Arguments: rd, rs1, rs2
+
+        int rd = param_to_int(params[0]);
+        int rs1 = param_to_int(params[1]);
+        int rs2 = param_to_int(params[2]);
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Equal To, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << "\n";
+        }
+    } else if (instr == "jump") {
         // Arguments: val
         // val might be a function name
 
@@ -877,9 +843,9 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         }
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Jump Immediate, val=" << val << "\n";
+            std::cout << "Jump To Section, val=" << val << "\n";
         }
-    } else if (instr == "jumpd") {
+    } else if (instr == "jumpdir") {
         // Arguments: rs
 
         int rs = param_to_int(params[0]);
@@ -887,7 +853,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Jump Direct, rs=" << rs << "\n";
         }
-    } else if (instr == "jumpifm") {
+    } else if (instr == "jumpif") {
         // Arguments: val, rcond
 
         int val = 0;
@@ -910,7 +876,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Jump If Immediate, val=" << val << ", rcond=" << rcond << "\n";
         }
-    } else if (instr == "jumpifd") {
+    } else if (instr == "jumpifdir") {
         // Arguments: rs, rcond
 
         int rs = param_to_int(params[0]);
@@ -1063,39 +1029,33 @@ std::string Yuasm::print_state() {
 }
 
 int Yuasm::get_no_of_params_for_instr(std::string instr) {
-    if (instr == "loadm") {
+    if (instr == "loadimm") {
         return 2;
-    } else if (instr == "loadd") {
+    } else if (instr == "loaddir") {
         return 2;
-    } else if (instr == "storem") {
+    } else if (instr == "store") {
         return 2;
-    } else if (instr == "stored") {
-        return 2;
-    } else if (instr == "addmm") {
+    } else if (instr == "add") {
         return 3;
-    } else if (instr == "adddd") {
+    } else if (instr == "sub") {
         return 3;
-    } else if (instr == "submm") {
+    } else if (instr == "lt") {
         return 3;
-    } else if (instr == "subdd") {
+    } else if (instr == "lte") {
         return 3;
-    } else if (instr == "ltd") {
+    } else if (instr == "gt") {
         return 3;
-    } else if (instr == "lted") {
+    } else if (instr == "gte") {
         return 3;
-    } else if (instr == "gtd") {
+    } else if (instr == "eq") {
         return 3;
-    } else if (instr == "gted") {
-        return 3;
-    } else if (instr == "eqd") {
-        return 3;
-    } else if (instr == "jumpm") {
+    } else if (instr == "jump") {
         return 1;
-    } else if (instr == "jumpd") {
+    } else if (instr == "jumpdir") {
         return 1;
-    } else if (instr == "jumpifm") {
+    } else if (instr == "jumpif") {
         return 2;
-    } else if (instr == "jumpifd") {
+    } else if (instr == "jumpifdir") {
         return 2;
     } else if (instr == "end") {
         return 0;
