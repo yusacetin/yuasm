@@ -74,7 +74,8 @@ class Yuasm {
         static bool is_alphabetic(char ch);
         static bool is_numeric(char ch);
         static int get_no_of_params_for_instr(std::string instr); // returns -1 if instruction is invalid
-        static int param_to_int(std::string param);
+        static unsigned int param_to_int(std::string param);
         static bool is_hex_digit(char c);
-        static int get_hex_value(char c);
+        static unsigned int get_hex_value(char c);
+        static std::string get_instr_as_hex(unsigned int instr_int);
 };

@@ -1,19 +1,21 @@
-loadimm rd val: load immediate
-loaddir rd addr: load direct 
+loadimm rd val: load immediate --> 0000_0000_8-bits-rd_16-bits-val
+loaddir rd addr: load direct --> 0000_0001_8-bits-rd_16-bits_addr
 
-store addr rs: store direct
+store addr rs: store direct --> 0000_0010_16-bits-addr_8-bits-rs
 
-add rd rs1 rs2: add, store to rd
-sub rd rs1 rs2: subtract, store to rd
+add rd rs1 rs2: add, store to rd --> 0001_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
+sub rd rs1 rs2: subtract, store to rd --> 0001_0001_8-bits-rd_8-bits-rs1_8-bits-rs2
 
-lt rd rs1 rs2: less than
-lte rd rs1 rs2: less than or equal to
-gt rd rs1 rs2: greater than
-gte rd rs1 rs2: greater than or equal to
-eq rd rs1 rs2: equal to
+lt rd rs1 rs2: less than --> 0001_0010_8-bits-rd_8-bits-rs1_8-bits-rs2
+lte rd rs1 rs2: less than or equal to --> 0001_0011_8-bits-rd_8-bits-rs1_8-bits-rs2
+gt rd rs1 rs2: greater than --> 0001_0100_8-bits-rd_8-bits-rs1_8-bits-rs2
+gte rd rs1 rs2: greater than or equal to --> 0001_0101_8-bits-rd_8-bits-rs1_8-bits-rs2
+eq rd rs1 rs2: equal to --> 0001_0110_8-bits-rd_8-bits-rs1_8-bits-rs2
 
-jump val: unconditionally jump to section val (same as calling doing val())
-jumpdir rs: unconditionally jump to val at rs
+jump val: unconditionally jump to section val (same as calling doing val()) --> 0010_0000_24-bits-val
+jumpdir rs: unconditionally jump to val at rs --> 0010_0001_8-bits-rs_skip-16-bits
 
-jumpif val rcond: jump to section val if cond>0
-jumpifdir rs rcond: jump to val at rs if cond>0
+jumpif val rcond: jump to section val if cond>0 --> 0010_0010_16-bits-val_8-bits-rcond
+jumpifdir rs rcond: jump to val at rs if cond>0 --> 0010_0011_8-bits-rs_8-bits-skip_8-bits-rcond
+
+end: infinite self loop --> 0010_00100_24-bits-skip
