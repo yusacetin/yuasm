@@ -444,7 +444,7 @@ int Yuasm::mainloop() {
                         }
 
                         buffer0.clear();
-                        pc++;
+                        pc += 4;
                         state = SCAN_FIRST;
                         break;
                     }
@@ -560,7 +560,7 @@ int Yuasm::mainloop() {
                         buffer1.clear();
                         params.clear();
                         used_comma = false;
-                        pc++;
+                        pc += 4;
                         state = SCAN_FIRST;
 
                         if (DEBUG_LEVEL >= 2) {
@@ -665,7 +665,7 @@ int Yuasm::mainloop() {
                         buffer1.clear();
                         params.clear();
                         used_comma = false;
-                        pc++;
+                        pc += 4;
                         state = COMMENT_SCAN_BEGIN;
                         state_before_block_comment = SCAN_FIRST; // TODO maybe implement a way to put block comments between parameters
                         break;
@@ -741,32 +741,32 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
             std::cout << "Load Immediate, rd=" << rd << ", val=" << val << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
 
-    } else if (instr == "loaddir") {
+    } else if (instr == "loadrin") {
         // Arguments: rd, addr
 
         unsigned int rd = param_to_int(params[0]);
-        unsigned int addr = param_to_int(params[1]);
+        unsigned int raddr = param_to_int(params[1]);
 
         instr_int += rd << 16;
-        instr_int += addr;
+        instr_int += raddr << 8;
         instr_int |= 0x01 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Load Direct, rd=" << rd << ", addr=" << addr << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Load Direct, rd=" << rd << ", raddr=" << raddr << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
 
     } else if (instr == "store") {
         // Arguments: addr, rs
 
-        unsigned int addr = param_to_int(params[0]);
+        unsigned int raddr = param_to_int(params[0]);
         unsigned int rs = param_to_int(params[1]);
 
-        instr_int += addr << 8;
-        instr_int += rs;
+        instr_int += raddr << 16;
+        instr_int += rs << 8;
         instr_int |= 0x02 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Store, addr=" << addr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Store, raddr=" << raddr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
 
     } else if (instr == "add") {
@@ -1038,11 +1038,10 @@ int Yuasm::write_binary() {
         instr_bytes[2] = (instr_int >> 16) & 0xFF;
         instr_bytes[3] = (instr_int >> 24) & 0xFF;
 
-        // TODO no idea why this order is the correct one. also maybe I shouldn't use unsigned char above?
-        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[2]), sizeof(instr_bytes[0]));
         bin_file.write(reinterpret_cast<const char*>(&instr_bytes[3]), sizeof(instr_bytes[0]));
-        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
+        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[2]), sizeof(instr_bytes[0]));
         bin_file.write(reinterpret_cast<const char*>(&instr_bytes[1]), sizeof(instr_bytes[0]));
+        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
     }
 
     bin_file.close();
@@ -1122,7 +1121,7 @@ std::string Yuasm::print_state() {
 int Yuasm::get_no_of_params_for_instr(std::string instr) {
     if (instr == "loadimm") {
         return 2;
-    } else if (instr == "loaddir") {
+    } else if (instr == "loadrin") {
         return 2;
     } else if (instr == "store") {
         return 2;

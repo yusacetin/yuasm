@@ -1,0 +1,48 @@
+#define i0 0
+#define i1 1
+#define i2 2
+#define addr0 3
+#define addr1 4
+#define addr2 5
+#define limit 6
+#define four 7
+#define cond 8
+#define counter 9
+#define one 10
+
+// constant address values
+#define num0_addr_val 0x0100
+#define num1_addr_val 0x0104
+#define num2_addr_val 0x0108
+
+// initialize constants
+loadimm four 4
+loadimm addr0 num0_addr_val
+loadimm addr1 num1_addr_val
+loadimm addr2 num2_addr_val
+loadimm counter 0
+loadimm one 1
+loadimm limit 10
+
+// initialize first two items
+loadimm i0 1
+store addr0 i0
+loadimm i1 1
+store addr1 i1
+
+.loop:
+// first load the previous two values to registers i0 and i1
+loadrin i0 addr0
+loadrin i1 addr1
+add i2 i0 i1
+store addr2 i2
+
+// increment item indices and counter
+add addr0 addr0 four
+add addr1 addr1 four
+add addr2 addr2 four
+add counter counter one
+
+// check end condition (loop if counter <= limit)
+lte cond counter limit
+jumpif loop cond

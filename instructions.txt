@@ -1,7 +1,7 @@
 loadimm rd val: load immediate --> 0000_0000_8-bits-rd_16-bits-val
-loaddir rd addr: load direct --> 0000_0001_8-bits-rd_16-bits_addr
+loadrin rd raddr: load register indirect --> 0000_0001_8-bits-rd_8-bits_raddr_8-bits-skip
 
-store addr rs: store direct --> 0000_0010_16-bits-addr_8-bits-rs
+store raddr rs: store register indirect --> 0000_0010_8-bits-raddr_8-bits-rs_8-bits-skip
 
 add rd rs1 rs2: add, store to rd --> 0001_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
 sub rd rs1 rs2: subtract, store to rd --> 0001_0001_8-bits-rd_8-bits-rs1_8-bits-rs2

@@ -1,6 +1,6 @@
 #include "yuasm.hpp"
 
 int main() {
-    Yuasm yuasm("sum_to_ten.yuasm");
+    Yuasm yuasm("fibonacci.yuasm");
     return 0;
 }
