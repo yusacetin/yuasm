@@ -53,6 +53,7 @@ class Yuasm {
         std::vector<char> buffer0; // for instructions and function names and macro names
         std::vector<char> buffer1; // for macro values and instruction parameters
         std::vector<std::string> params; // for instruction parameters
+        std::vector<unsigned int> instructions;
 
         std::stack<std::unique_ptr<std::ifstream>> files;
         std::map<std::string, std::string> macros;
@@ -68,6 +69,7 @@ class Yuasm {
         std::string print_state();
         int eval_instr(std::string instr, std::vector<std::string> params);
         int get_function_index(std::string func);
+        int write_binary();
 
         static void expand_macro(std::vector<char>* buffer, std::map<std::string, std::string> macro_list);
         static const int get_category(char ch);

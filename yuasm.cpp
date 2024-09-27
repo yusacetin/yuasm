@@ -681,6 +681,8 @@ int Yuasm::mainloop() {
         }
     }
 
+    write_binary();
+
     if (DEBUG_LEVEL >= 1) {
         std::cout << "########\n\n";
         std::cout << "List of Macros:\n";
@@ -958,6 +960,8 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         }
     }
 
+    instructions.push_back(instr_int);
+
     return 0;
 }
 
@@ -1020,6 +1024,28 @@ int Yuasm::open_new_file(std::string fname) {
         return 1;
     }
     files.push(std::move(file));
+    return 0;
+}
+
+int Yuasm::write_binary() {
+    std::ofstream bin_file("output.yubin", std::ios::binary);
+
+    for (int i=0; i<instructions.size(); i++) {
+        unsigned int instr_int = instructions[i];
+        unsigned char instr_bytes[4];
+        instr_bytes[0] = (instr_int) & 0xFF;
+        instr_bytes[1] = (instr_int >> 8) & 0xFF;
+        instr_bytes[2] = (instr_int >> 16) & 0xFF;
+        instr_bytes[3] = (instr_int >> 24) & 0xFF;
+
+        // TODO no idea why this order is the correct one. also maybe I shouldn't use unsigned char above?
+        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[2]), sizeof(instr_bytes[0]));
+        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[3]), sizeof(instr_bytes[0]));
+        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
+        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[1]), sizeof(instr_bytes[0]));
+    }
+
+    bin_file.close();
     return 0;
 }
 
