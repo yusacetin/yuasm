@@ -1,21 +1,62 @@
-loadimm rd val: load immediate --> 0000_0000_8-bits-rd_16-bits-val
-loadrin rd raddr: load register indirect --> 0000_0001_8-bits-rd_8-bits_raddr_8-bits-skip
+Legend
+------
+r[i]: value at register number i
+m[i]: value at address i
+names beginning with r represent registers that contain the related info
+rd: destination register
+rs: source register
+'m' at the end of an instruction name stands for iMmediate
+'d' at the end of an instruction name stands for Direct
+pc: program counter
 
-store raddr rs: store register indirect --> 0000_0010_8-bits-raddr_8-bits-rs_8-bits-skip
 
-add rd rs1 rs2: add, store to rd --> 0001_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
-sub rd rs1 rs2: subtract, store to rd --> 0001_0001_8-bits-rd_8-bits-rs1_8-bits-rs2
+Load Store
+----------
 
-lt rd rs1 rs2: less than --> 0001_0010_8-bits-rd_8-bits-rs1_8-bits-rs2
-lte rd rs1 rs2: less than or equal to --> 0001_0011_8-bits-rd_8-bits-rs1_8-bits-rs2
-gt rd rs1 rs2: greater than --> 0001_0100_8-bits-rd_8-bits-rs1_8-bits-rs2
-gte rd rs1 rs2: greater than or equal to --> 0001_0101_8-bits-rd_8-bits-rs1_8-bits-rs2
-eq rd rs1 rs2: equal to --> 0001_0110_8-bits-rd_8-bits-rs1_8-bits-rs2
+loadimm rd val: r[rd] = val --> 0000_0000_8-bits-rd_16-bits-val
+loadrin rd raddr: r[rd] = m[r[raddr]] (rin: register indirect) --> 0000_0001_8-bits-rd_8-bits_raddr_8-bits-skip
+store raddr rs: m[r[raddr]] = r[rs] (register indirect mode) --> 0000_0010_8-bits-raddr_8-bits-rs_8-bits-skip
+storemd addr rs:  m[addr] = r[rs] --> 0000_0011_16-bits-addr_8-bits-rs
+loaddir rd addr: r[rd] = m[addr] --> 0000_0100_8-bits-rd_16-bits-addr
 
-jump val: unconditionally jump to section val (same as calling doing val()) --> 0010_0000_24-bits-val
-jumpdir rs: unconditionally jump to val at rs --> 0010_0001_8-bits-rs_skip-16-bits
 
-jumpif val rcond: jump to section val if cond>0 --> 0010_0010_16-bits-val_8-bits-rcond
-jumpifdir rs rcond: jump to val at rs if cond>0 --> 0010_0011_8-bits-rs_8-bits-skip_8-bits-rcond
+Arithmetic and Comparison // TODO make a different category for comparison instructions
+-------------------------
 
+add rd rs1 rs2: r[rd] = r[rs1] + r[rs2] --> 0001_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
+sub rd rs1 rs2: r[rd] = r[rs1] - r[rs2] --> 0001_0001_8-bits-rd_8-bits-rs1_8-bits-rs2
+
+lt rd rs1 rs2: r[rd] = r[rs1] < r[rs2] --> 0001_0010_8-bits-rd_8-bits-rs1_8-bits-rs2
+lte rd rs1 rs2: r[rd] = r[rs1] <= r[rs2] --> 0001_0011_8-bits-rd_8-bits-rs1_8-bits-rs2
+gt rd rs1 rs2: r[rd] = r[rs1] > r[rs2] --> 0001_0100_8-bits-rd_8-bits-rs1_8-bits-rs2
+gte rd rs1 rs2: r[rd] = r[rs1] >= r[rs2] --> 0001_0101_8-bits-rd_8-bits-rs1_8-bits-rs2
+eq rd rs1 rs2: r[rd] = r[rs1] == r[rs2] --> 0001_0110_8-bits-rd_8-bits-rs1_8-bits-rs2
+
+lshift rd rs1 rs2: r[rd] = r[rs1] << r[rs2] --> 0001_0111_8-bits-rd_8-bits-rs1_8-bits-rs2
+rshift rd rs1 rs2: r[rd] = r[rs1] >> r[rs2] --> 0001_1000_8-bits-rd_8-bits-rs1_8-bits-rs2
+
+mul rd rs1 rs2: r[rd] = r[rs1] * r[rs2] --> 0001_1001_8-bits-rd_8-bits-rs1_8-bits-rs2
+div rd rs1 rs2: r[rd] = r[rs1] / r[rs2] --> 0001_1010_8-bits-rd_8-bits-rs1_8-bits-rs2
+
+
+Control
+-------
+
+jump val: pc = val --> 0010_0000_24-bits-val
+jumpd rs: pc = r[rs] --> 0010_0001_8-bits-rs_skip-16-bits
+
+jumpif val rcond: pc = val if r[rcond] > 0 --> 0010_0010_16-bits-val_8-bits-rcond
+jumpifd rs rcond: pc = r[rs] if r[rcond] > 0 --> 0010_0011_8-bits-rs_8-bits-skip_8-bits-rcond
 end: infinite self loop --> 0010_00100_24-bits-skip
+
+
+Logical
+-------
+
+and rd rs1 rs2: r[rd] = r[rs1] & r[rs2] --> 0011_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
+or rd rs1 rs2: r[rd] = r[rs1] | r[rs2] --> 0011_0001_8-bits-rd_8-bits-rs1_8-bits-rs2
+
+nand rd rs1 rs2: r[rd] = ~(r[rs1] & r[rs2]) --> 0011_0010_8-bits-rd_8-bits-rs1_8-bits-rs2
+nor rd rs1 rs2: r[rd] = ~(r[rs1] | r[rs2]) --> 0011_0011_8-bits-rd_8-bits-rs1_8-bits-rs2
+
+xor rd rs1 rs2: r[rd] = r[rs1] ^ r[rs2] --> 0011_0100_8-bits-rd_8-bits-rs1_8-bits-rs2

@@ -1,6 +1,6 @@
 #include "yuasm.hpp"
 
 int main() {
-    Yuasm yuasm("fibonacci.yuasm");
+    Yuasm yuasm("programs/fibonacci.yuasm");
     return 0;
 }

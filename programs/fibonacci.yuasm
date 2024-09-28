@@ -22,7 +22,7 @@ loadimm addr1 num1_addr_val
 loadimm addr2 num2_addr_val
 loadimm counter 0
 loadimm one 1
-loadimm limit 10
+loadimm limit 20
 
 // initialize first two items
 loadimm i0 1
@@ -43,6 +43,6 @@ add addr1 addr1 four
 add addr2 addr2 four
 add counter counter one
 
-// check end condition (loop if counter <= limit)
-lte cond counter limit
+// check end condition (loop if counter < limit)
+lt cond counter limit
 jumpif loop cond

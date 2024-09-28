@@ -3,13 +3,15 @@
 #define limit 2
 #define one 3
 #define cond 4
-#define final_res 0x0100
+#define final_res 5
+#define final_res_val 0x0100
 
 .main:
 loadimm res 0 // result starts as zero
 loadimm cur 1 // current value starts as zero
 loadimm limit 10 // count until 10
 loadimm one 1 // the constant value one (because adddm is not supported for now)
+loadimm final_res final_res_val // save result address
 
 .loop:
 add res res cur // add current value to result

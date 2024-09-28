@@ -273,8 +273,18 @@ int Yuasm::mainloop() {
             case SCAN_PREPROC_VAL: {
                 switch (category) {
                     case NUM:
-                    case AL: { // scan the instruction
+                    case AL: { // scan value
                         buffer1.push_back(ch);
+                        break;
+                    }
+
+                    case DASH: {
+                        if (buffer1.size() == 0) { // only the first character can be dash
+                            buffer1.push_back(ch);
+                        } else {
+                            std::cerr << "Error: invalid character for macro value: " << ch << "\n";
+                            return 1;
+                        }
                         break;
                     }
 
@@ -307,7 +317,7 @@ int Yuasm::mainloop() {
                     }
 
                     default: {
-                        std::cerr << "Error: invalid character for macro value\n";
+                        std::cerr << "Error: invalid character for macro value: " << ch << "\n";
                         return 1;
                     }
                 }
@@ -325,6 +335,7 @@ int Yuasm::mainloop() {
                     case COLON:
                     case SC: // No SC at the end of include lines
                     case AST:
+                    case SLASH:
                     case HASH: {
                         buffer0.push_back(ch);
                         break;
@@ -351,7 +362,7 @@ int Yuasm::mainloop() {
                         break;
                     }
 
-                    default: { // slash or EOF
+                    default: { // EOF
                         std::cerr << "Error: invalid file name\n";
                         return -1;
                     }
@@ -472,7 +483,7 @@ int Yuasm::mainloop() {
                         if (get_no_of_params_for_instr(buffer_str) >= 0) { // means instruction is valid
                             state = SCAN_PARAMS;
                         } else {
-                            std::cerr << "Error: invalid instruction\n";
+                            std::cerr << "Error: invalid instruction: " << buffer_str << "\n";
                             return 1;
                         }
                         break;
@@ -480,6 +491,8 @@ int Yuasm::mainloop() {
 
                     // Note: parentheses must be connected to the function name when calling
                     // spaces after the function name are not allowed
+                    // More important note: this is redundant due to the jump instruction
+                    // TODO maybe actually implement func() calls
                     case PAREN_OPEN: {
                         state = WAIT_PAREN_CLOSE;
                         break;
@@ -543,6 +556,10 @@ int Yuasm::mainloop() {
 
                             expand_macro(&buffer1, macros); // Check if it's a macro expansion
                             std::string param(buffer1.begin(), buffer1.end() + offset);
+                            if (used_dash) {
+                                param = "-" + param;
+                                used_dash = false;
+                            }
                             params.push_back(param);
                             buffer1.clear();
 
@@ -572,6 +589,15 @@ int Yuasm::mainloop() {
                         break;
                     }
 
+                    case DASH: {
+                        if (used_dash) {
+                            std::cerr << "Error: double negation is not allowed\n";
+                            return 1;
+                        }
+                        used_dash = true;
+                        break;
+                    }
+
                     case AL:
                     case NUM: {
                         buffer1.push_back(ch);
@@ -592,6 +618,10 @@ int Yuasm::mainloop() {
                         expand_macro(&buffer1, macros);
 
                         std::string param(buffer1.begin(), buffer1.end());
+                        if (used_dash) {
+                            param = "-" + param;
+                            used_dash = false;
+                        }
                         params.push_back(param);
                         buffer1.clear();
 
@@ -604,12 +634,22 @@ int Yuasm::mainloop() {
                     // Only one comma between parameters is allowed
                     // No comma before the first parameter is allowed
                     case COMMA: {
+                        // Disallow comma after negative sign
+                        if (used_dash) {
+                            std::cerr << "Error: comma after negative sign is not allowed\n";
+                            return 1;
+                        }
+
                         // If the comma is connected to the end of the parameter
                         if (buffer1.size() > 0) {
                             // Check if it's a macro expansion
                             expand_macro(&buffer1, macros);
 
                             std::string param(buffer1.begin(), buffer1.end());
+                            if (used_dash) {
+                                param = "-" + param;
+                                used_dash = false;
+                            }
                             params.push_back(param);
                             used_comma = true;
                             buffer1.clear();
@@ -646,8 +686,12 @@ int Yuasm::mainloop() {
                         if (buffer1.size() > 0) {
                             expand_macro(&buffer1, macros); // Check if it's a macro expansion
                             std::string param(buffer1.begin(), buffer1.end());
+                            if (used_dash) {
+                                param = "-" + param;
+                                used_dash = false;
+                            }
                             params.push_back(param);
-                            used_comma = true;
+                            used_comma = true; // TODO check why I put this here
                             buffer1.clear();
 
                             if (DEBUG_LEVEL >= 2) {
@@ -722,17 +766,42 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         return 1;
     }
 
+    for (int i=0; i<params.size(); i++) { // check for illegal negatives
+        if (params[i][0] == '-') {
+            if (instr != "loadimm") {
+                std::cerr << "Error: parameter can not be negative: " << params[i] << "\n";
+                return 1;
+            }
+        }
+    }
+
     // General Rules:
     // Valid register values are 0 to 255 (inclusively)
-    // Rules are not being enforced at the moment
+    // Not all rules are being enforced at the moment so the source code should make sense
 
     unsigned int instr_int = 0;
 
     if (instr == "loadimm") {
         // Arguments: rd, val
 
+        if (params[0][0] == '-') {
+            std::cerr << "Error: rd value can not be negative\n";
+            return 1;
+        }
+
+        bool neg = false;
+        if (params[1][0] == '-') {
+            neg = true;
+            //std::cout << "old params 1: " << params[1] << "\n";
+            params[1] = params[1].substr(1);
+            //std::cout << "new params 1: " << params[1] << "\n";
+        }
+
         unsigned int rd = param_to_int(params[0]);
         unsigned int val = param_to_int(params[1]);
+        if (neg) {
+            val = twos_complement(val) & 0xFFFF;
+        }
 
         instr_int += rd << 16;
         instr_int += val;
@@ -742,7 +811,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         }
 
     } else if (instr == "loadrin") {
-        // Arguments: rd, addr
+        // Arguments: rd, raddr
 
         unsigned int rd = param_to_int(params[0]);
         unsigned int raddr = param_to_int(params[1]);
@@ -756,7 +825,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         }
 
     } else if (instr == "store") {
-        // Arguments: addr, rs
+        // Arguments: raddr, rs
 
         unsigned int raddr = param_to_int(params[0]);
         unsigned int rs = param_to_int(params[1]);
@@ -899,7 +968,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Jump To Section, val=" << val << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
-    } else if (instr == "jumpdir") {
+    } else if (instr == "jumpd") {
         // Arguments: rs
 
         unsigned int rs = param_to_int(params[0]);
@@ -937,7 +1006,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Jump If Immediate, val=" << val << ", rcond=" << rcond << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
-    } else if (instr == "jumpifdir") {
+    } else if (instr == "jumpifd") {
         // Arguments: rs, rcond
 
         unsigned int rs = param_to_int(params[0]);
@@ -958,12 +1027,234 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         if (DEBUG_LEVEL >= 0) {
             std::cout << "End" << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
+    } else if (instr == "storemd") { // 0000_0011_16-bits-addr_8-bits-rs
+        // Arguments: addr, rs
+
+        unsigned int addr = param_to_int(params[0]);
+        unsigned int rs = param_to_int(params[1]);
+
+        instr_int += addr << 8;
+        instr_int += rs;
+        instr_int |= 0x03 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Store Immediate Direct, addr=" << addr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "loaddir") { // 0000_0100_8-bits-rd_16-bits-addr
+        // Arguments: rd, addr
+
+        unsigned int rd = param_to_int(params[0]);
+        unsigned int addr = param_to_int(params[1]);
+
+        instr_int += rd << 16;
+        instr_int += addr;
+        instr_int |= 0x04 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Load Direct, rd=" << rd << ", addr=" << addr << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "lshift") {
+        // Arguments: rd, rs1, rs2
+
+        unsigned int rd = param_to_int(params[0]);
+        unsigned int rs1 = param_to_int(params[1]);
+        unsigned int rs2 = param_to_int(params[2]);
+
+        instr_int += rd << 16;
+        instr_int += rs1 << 8;
+        instr_int += rs2;
+        instr_int |= 0x17 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Left Shift, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "rshift") {
+        // Arguments: rd, rs1, rs2
+
+        unsigned int rd = param_to_int(params[0]);
+        unsigned int rs1 = param_to_int(params[1]);
+        unsigned int rs2 = param_to_int(params[2]);
+
+        instr_int += rd << 16;
+        instr_int += rs1 << 8;
+        instr_int += rs2;
+        instr_int |= 0x18 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Right Shift, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "mul") {
+        // Arguments: rd, rs1, rs2
+
+        unsigned int rd = param_to_int(params[0]);
+        unsigned int rs1 = param_to_int(params[1]);
+        unsigned int rs2 = param_to_int(params[2]);
+
+        instr_int += rd << 16;
+        instr_int += rs1 << 8;
+        instr_int += rs2;
+        instr_int |= 0x19 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Multiply, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "div") {
+        // Arguments: rd, rs1, rs2
+
+        unsigned int rd = param_to_int(params[0]);
+        unsigned int rs1 = param_to_int(params[1]);
+        unsigned int rs2 = param_to_int(params[2]);
+
+        instr_int += rd << 16;
+        instr_int += rs1 << 8;
+        instr_int += rs2;
+        instr_int |= 0x1A << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Divide, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "and") {
+        // Arguments: rd, rs1, rs2
+
+        unsigned int rd = param_to_int(params[0]);
+        unsigned int rs1 = param_to_int(params[1]);
+        unsigned int rs2 = param_to_int(params[2]);
+
+        instr_int += rd << 16;
+        instr_int += rs1 << 8;
+        instr_int += rs2;
+        instr_int |= 0x30 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "And, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "or") {
+        // Arguments: rd, rs1, rs2
+
+        unsigned int rd = param_to_int(params[0]);
+        unsigned int rs1 = param_to_int(params[1]);
+        unsigned int rs2 = param_to_int(params[2]);
+
+        instr_int += rd << 16;
+        instr_int += rs1 << 8;
+        instr_int += rs2;
+        instr_int |= 0x31 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Or, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "nand") {
+        // Arguments: rd, rs1, rs2
+
+        unsigned int rd = param_to_int(params[0]);
+        unsigned int rs1 = param_to_int(params[1]);
+        unsigned int rs2 = param_to_int(params[2]);
+
+        instr_int += rd << 16;
+        instr_int += rs1 << 8;
+        instr_int += rs2;
+        instr_int |= 0x32 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Nand, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "nor") {
+        // Arguments: rd, rs1, rs2
+
+        unsigned int rd = param_to_int(params[0]);
+        unsigned int rs1 = param_to_int(params[1]);
+        unsigned int rs2 = param_to_int(params[2]);
+
+        instr_int += rd << 16;
+        instr_int += rs1 << 8;
+        instr_int += rs2;
+        instr_int |= 0x33 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Nor, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "xor") {
+        // Arguments: rd, rs1, rs2
+
+        unsigned int rd = param_to_int(params[0]);
+        unsigned int rs1 = param_to_int(params[1]);
+        unsigned int rs2 = param_to_int(params[2]);
+
+        instr_int += rd << 16;
+        instr_int += rs1 << 8;
+        instr_int += rs2;
+        instr_int |= 0x34 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Xor, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
     }
 
     instructions.push_back(instr_int);
 
     return 0;
 }
+
+int Yuasm::open_new_file(std::string fname) {
+    std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>(fname);
+    if (!(*file)) {
+        std::cerr << "Error: file not found" << std::endl;
+        return 1;
+    }
+    files.push(std::move(file));
+    return 0;
+}
+
+int Yuasm::write_binary() {
+    std::ofstream bin_file("program.yubin", std::ios::binary);
+
+    for (int i=0; i<instructions.size(); i++) {
+        unsigned int instr_int = instructions[i];
+        unsigned char instr_bytes[4];
+        instr_bytes[0] = (instr_int) & 0xFF;
+        instr_bytes[1] = (instr_int >> 8) & 0xFF;
+        instr_bytes[2] = (instr_int >> 16) & 0xFF;
+        instr_bytes[3] = (instr_int >> 24) & 0xFF;
+
+        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[3]), sizeof(instr_bytes[0]));
+        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[2]), sizeof(instr_bytes[0]));
+        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[1]), sizeof(instr_bytes[0]));
+        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
+    }
+
+    bin_file.close();
+    return 0;
+}
+
+int Yuasm::get_function_index(std::string func) {
+    if (functions.find(func) != functions.end()) {
+        int index = functions[func];
+        return index;
+    }
+    return -1;
+}
+
+std::string Yuasm::print_state() {
+    switch (state) {
+        case SCAN_FIRST: return "SCAN_FIRST";
+        case SCAN_INSTR_OR_MACRO: return "SCAN_INSTR_OR_MACRO";
+        case SCAN_PARAMS: return "SCAN_PARAMS";
+        case SCAN_PREPROC_DEF: return "SCAN_PREPROC_DEF";
+        case SCAN_PREPROC_SUB: return "SCAN_PREPROC_SUB";
+        case SCAN_INCLUDE_FPATH: return "SCAN_INCLUDE_FPATH";
+        case SCAN_FUNC_HEAD: return "SCAN_FUNC_HEAD";
+        case SCAN_PREPROC_VAL: return "SCAN_PREPROC_VAL";
+        case WAIT_PAREN_CLOSE: return "WAIT_PAREN_CLOSE";
+        case COMMENT_SCAN_BEGIN: return "COMMENT_SCAN_BEGIN";
+        case LINE_COMMENT: return "LINE_COMMENT";
+        case BLOCK_COMMENT: return "BLOCK_COMMENT";
+        case LINE_COMMENT_END: return "LINE_COMMENT_END";
+        case BLOCK_COMMENT_END: return "BLOCK_COMMENT_END";
+        default: return "UNKNOWN";
+    }
+}
+
+// Static functions
 
 unsigned int Yuasm::param_to_int(std::string param) {
     unsigned int res = 0;
@@ -1017,37 +1308,6 @@ unsigned int Yuasm::param_to_int(std::string param) {
     return res;
 }
 
-int Yuasm::open_new_file(std::string fname) {
-    std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>(fname);
-    if (!(*file)) {
-        std::cerr << "Error: file not found" << std::endl;
-        return 1;
-    }
-    files.push(std::move(file));
-    return 0;
-}
-
-int Yuasm::write_binary() {
-    std::ofstream bin_file("output.yubin", std::ios::binary);
-
-    for (int i=0; i<instructions.size(); i++) {
-        unsigned int instr_int = instructions[i];
-        unsigned char instr_bytes[4];
-        instr_bytes[0] = (instr_int) & 0xFF;
-        instr_bytes[1] = (instr_int >> 8) & 0xFF;
-        instr_bytes[2] = (instr_int >> 16) & 0xFF;
-        instr_bytes[3] = (instr_int >> 24) & 0xFF;
-
-        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[3]), sizeof(instr_bytes[0]));
-        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[2]), sizeof(instr_bytes[0]));
-        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[1]), sizeof(instr_bytes[0]));
-        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
-    }
-
-    bin_file.close();
-    return 0;
-}
-
 void Yuasm::expand_macro(std::vector<char>* buffer, std::map<std::string, std::string> macro_list) {
     std::string buffer_str(buffer->begin(), buffer->end());
     if (macro_list.find(buffer_str) != macro_list.end()) {
@@ -1056,14 +1316,6 @@ void Yuasm::expand_macro(std::vector<char>* buffer, std::map<std::string, std::s
         //*buffer = substituted_value_vector;
         buffer->assign(expansion.begin(), expansion.end());
     }
-}
-
-int Yuasm::get_function_index(std::string func) {
-    if (functions.find(func) != functions.end()) {
-        int index = functions[func];
-        return index;
-    }
-    return -1;
 }
 
 const int Yuasm::get_category(char ch) {
@@ -1079,7 +1331,8 @@ const int Yuasm::get_category(char ch) {
         case '/': return SLASH;
         case '*': return AST;
         case '(': return PAREN_OPEN;
-        case ')': return PAREN_CLOSE; 
+        case ')': return PAREN_CLOSE;
+        case '-': return DASH;
         default:
             if (is_alphabetic(ch)) {
                 return AL;
@@ -1091,31 +1344,15 @@ const int Yuasm::get_category(char ch) {
 }
 
 bool Yuasm::is_alphabetic(char ch) {
-    return (isalpha(ch) || (ch == '_' || ch == '-'));
+    return (isalpha(ch) || (ch == '_'));
 }
 
 bool Yuasm::is_numeric(char ch) {
     return isdigit(ch);
 }
 
-std::string Yuasm::print_state() {
-    switch (state) {
-        case SCAN_FIRST: return "SCAN_FIRST";
-        case SCAN_INSTR_OR_MACRO: return "SCAN_INSTR_OR_MACRO";
-        case SCAN_PARAMS: return "SCAN_PARAMS";
-        case SCAN_PREPROC_DEF: return "SCAN_PREPROC_DEF";
-        case SCAN_PREPROC_SUB: return "SCAN_PREPROC_SUB";
-        case SCAN_INCLUDE_FPATH: return "SCAN_INCLUDE_FPATH";
-        case SCAN_FUNC_HEAD: return "SCAN_FUNC_HEAD";
-        case SCAN_PREPROC_VAL: return "SCAN_PREPROC_VAL";
-        case WAIT_PAREN_CLOSE: return "WAIT_PAREN_CLOSE";
-        case COMMENT_SCAN_BEGIN: return "COMMENT_SCAN_BEGIN";
-        case LINE_COMMENT: return "LINE_COMMENT";
-        case BLOCK_COMMENT: return "BLOCK_COMMENT";
-        case LINE_COMMENT_END: return "LINE_COMMENT_END";
-        case BLOCK_COMMENT_END: return "BLOCK_COMMENT_END";
-        default: return "UNKNOWN";
-    }
+unsigned int Yuasm::twos_complement(unsigned int val) {
+    return ~val + 1;
 }
 
 int Yuasm::get_no_of_params_for_instr(std::string instr) {
@@ -1141,14 +1378,36 @@ int Yuasm::get_no_of_params_for_instr(std::string instr) {
         return 3;
     } else if (instr == "jump") {
         return 1;
-    } else if (instr == "jumpdir") {
+    } else if (instr == "jumpd") {
         return 1;
     } else if (instr == "jumpif") {
         return 2;
-    } else if (instr == "jumpifdir") {
+    } else if (instr == "jumpifd") {
         return 2;
     } else if (instr == "end") {
         return 0;
+    } else if (instr == "storemd") {
+        return 2;
+    } else if (instr == "loaddir") {
+        return 2;
+    } else if (instr == "lshift") {
+        return 3;
+    } else if (instr == "rshift") {
+        return 3;
+    } else if (instr == "mul") {
+        return 3;
+    } else if (instr == "div") {
+        return 3;
+    } else if (instr == "and") {
+        return 3;
+    } else if (instr == "or") {
+        return 3;
+    } else if (instr == "nand") {
+        return 3;
+    } else if (instr == "nor") {
+        return 3;
+    } else if (instr == "xor") {
+        return 3;
     }
     return -1;
 }

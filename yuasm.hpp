@@ -45,7 +45,8 @@ class Yuasm {
             AST,
             INPUT_EOF,
             PAREN_OPEN,
-            PAREN_CLOSE
+            PAREN_CLOSE,
+            DASH
         };
 
         int state = SCAN_FIRST;
@@ -63,6 +64,7 @@ class Yuasm {
         int state_before_block_comment; // TODO not properly implemented
         bool trailing_spaces_only = false;
         bool used_comma = false;
+        bool used_dash = false; // to detect negative numbers
 
         int open_new_file(std::string fname);
         int mainloop();
@@ -80,4 +82,5 @@ class Yuasm {
         static bool is_hex_digit(char c);
         static unsigned int get_hex_value(char c);
         static std::string get_instr_as_hex(unsigned int instr_int);
+        static unsigned int twos_complement(unsigned int val);
 };

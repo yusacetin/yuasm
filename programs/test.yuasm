@@ -1,0 +1,57 @@
+#define a 0
+#define b 1
+#define res0 2
+#define res1 3
+#define one 4
+#define zero 5
+#define c 6
+
+loadimm a 32
+loadimm b 4
+loadimm one 1
+loadimm zero 0
+
+mul res0 a b
+div res1 a b
+
+lshift res0 res0 one
+rshift res1 res1 one
+
+//storemd 0x100 res0
+//storemd 0x104 res1
+
+// try logical
+
+and c one zero
+storemd 0x108 c
+
+and c one one
+storemd 0x10C c
+
+or c one zero
+storemd 0x110 c
+
+or c one one
+storemd 0x114 c
+
+nand c one zero
+storemd 0x118 c
+
+nand c one one
+storemd 0x11C c
+
+nor c one zero
+storemd 0x120 c
+
+nor c one one
+storemd 0x124 c
+
+xor c one zero
+storemd 0x128 c
+
+xor c one one
+storemd 0x12C c
+
+nor c zero zero
+storemd 0x130 c
+

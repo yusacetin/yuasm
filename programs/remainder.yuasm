@@ -1,0 +1,19 @@
+#define a_val 128
+#define b_val 19
+
+#define a 0
+#define b 1
+#define div_res 2
+#define mul_res 3
+#define res 4
+
+.main:
+
+loadimm a a_val
+loadimm b b_val
+
+div div_res a b
+mul mul_res div_res b
+
+sub res a mul_res
+storemd 0x100 res
