@@ -6,17 +6,27 @@ An assembler I'm working on for fun for a fictional ISA. Programs can be run wit
 
 ### Legend
 
-The most significant 4 bits of any instruction denote the instruction category, and the next 4 bits denote the instruction identifier. The most significant byte thus contains the opcode.
-r[i]: value at register number i
-m[i]: value at address i
-names beginning with r represent registers that contain the related info
-rd: destination register
-rs: source register
-'m' at the end of an instruction name stands for iMmediate
-'d' at the end of an instruction name stands for Direct
-'r' at the end of an instruction name stands for Register indirect
-'n' at the end of an instruction name stands for iNdirect
-pc: program counter
+* The most significant 4 bits of any instruction denote the instruction category, and the next 4 bits denote the instruction identifier. The most significant byte thus contains the opcode.
+
+* r[i]: value at register number i
+
+* m[i]: value at address i
+
+* names beginning with r represent registers that contain the related info
+
+* rd: destination register
+
+* rs: source register
+
+* 'm' at the end of an instruction name stands for iMmediate
+
+* 'd' at the end of an instruction name stands for Direct
+
+* 'r' at the end of an instruction name stands for Register indirect
+
+* 'n' at the end of an instruction name stands for iNdirect
+
+* pc: program counter
 
 ### Memory (category 0x0)
 
