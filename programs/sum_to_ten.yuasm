@@ -7,15 +7,16 @@
 #define final_res_val 0x0100
 
 .main:
-loadimm res 0 // result starts as zero
-loadimm cur 1 // current value starts as zero
-loadimm limit 10 // count until 10
-loadimm one 1 // the constant value one (because adddm is not supported for now)
-loadimm final_res final_res_val // save result address
+loadm res 0 // result starts as zero
+loadm cur 1 // current value starts as zero
+loadm limit 10 // count until 10
+loadm one 1 // the constant value one (because adddm is not supported for now)
+loadm final_res final_res_val // save result address
 
 .loop:
 add res res cur // add current value to result
 add cur cur one // increment current value by one
 lte cond cur limit // check if cur is less than or equal to the limit
 jumpif loop cond // loop if cur < limit
-store final_res res // now the final result is saved to the address final_res
+storen final_res res // now the final result is saved to the address final_res
+

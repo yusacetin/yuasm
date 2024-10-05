@@ -16,26 +16,26 @@
 #define num2_addr_val 0x0108
 
 // initialize constants
-loadimm four 4
-loadimm addr0 num0_addr_val
-loadimm addr1 num1_addr_val
-loadimm addr2 num2_addr_val
-loadimm counter 0
-loadimm one 1
-loadimm limit 20
+loadm four 4
+loadm addr0 num0_addr_val
+loadm addr1 num1_addr_val
+loadm addr2 num2_addr_val
+loadm counter 0
+loadm one 1
+loadm limit 20
 
 // initialize first two items
-loadimm i0 1
-store addr0 i0
-loadimm i1 1
-store addr1 i1
+loadm i0 1
+storen addr0 i0
+loadm i1 1
+storen addr1 i1
 
 .loop:
 // first load the previous two values to registers i0 and i1
-loadrin i0 addr0
-loadrin i1 addr1
+loadr i0 addr0
+loadr i1 addr1
 add i2 i0 i1
-store addr2 i2
+storen addr2 i2
 
 // increment item indices and counter
 add addr0 addr0 four
@@ -46,3 +46,4 @@ add counter counter one
 // check end condition (loop if counter < limit)
 lt cond counter limit
 jumpif loop cond
+

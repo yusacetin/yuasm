@@ -768,7 +768,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
 
     for (int i=0; i<params.size(); i++) { // check for illegal negatives
         if (params[i][0] == '-') {
-            if (instr != "loadimm") {
+            if (instr != "loadm") {
                 std::cerr << "Error: parameter can not be negative: " << params[i] << "\n";
                 return 1;
             }
@@ -781,7 +781,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
 
     unsigned int instr_int = 0;
 
-    if (instr == "loadimm") {
+    if (instr == "loadm") {
         // Arguments: rd, val
 
         if (params[0][0] == '-') {
@@ -810,7 +810,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
             std::cout << "Load Immediate, rd=" << rd << ", val=" << val << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
 
-    } else if (instr == "loadrin") {
+    } else if (instr == "loadr") {
         // Arguments: rd, raddr
 
         unsigned int rd = param_to_int(params[0]);
@@ -824,7 +824,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
             std::cout << "Load Direct, rd=" << rd << ", raddr=" << raddr << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
 
-    } else if (instr == "store") {
+    } else if (instr == "storen") {
         // Arguments: raddr, rs
 
         unsigned int raddr = param_to_int(params[0]);
@@ -835,7 +835,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x02 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Store, raddr=" << raddr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Store Indirect, raddr=" << raddr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
 
     } else if (instr == "add") {
@@ -878,7 +878,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int += rd << 16;
         instr_int += rs1 << 8;
         instr_int += rs2;
-        instr_int |= 0x12 << 24;
+        instr_int |= 0x50 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Less Than, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
@@ -893,7 +893,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int += rd << 16;
         instr_int += rs1 << 8;
         instr_int += rs2;
-        instr_int |= 0x13 << 24;
+        instr_int |= 0x51 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Less Than or Equal To, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
@@ -908,7 +908,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int += rd << 16;
         instr_int += rs1 << 8;
         instr_int += rs2;
-        instr_int |= 0x14 << 24;
+        instr_int |= 0x52 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Greater Than, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
@@ -923,7 +923,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int += rd << 16;
         instr_int += rs1 << 8;
         instr_int += rs2;
-        instr_int |= 0x15 << 24;
+        instr_int |= 0x53 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Greater Than or Equal To, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
@@ -938,14 +938,14 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int += rd << 16;
         instr_int += rs1 << 8;
         instr_int += rs2;
-        instr_int |= 0x16 << 24;
+        instr_int |= 0x54 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Equal To, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
     } else if (instr == "jump") {
         // Arguments: val
-        // val might be a function name
+        // val should be a function name
 
         unsigned int val = 0;
         std::string val_str = params[0];
@@ -956,7 +956,8 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
                 std::cerr << "Error: invalid function name\n";
                 return 1;
             } else {
-                val = func_index;
+                int diff = func_index - pc;
+                val = diff & 0xFFFF;
             }
         } else {
             val = param_to_int(params[0]);
@@ -981,6 +982,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         }
     } else if (instr == "jumpif") {
         // Arguments: val, rcond
+        // val should be a function name
 
         unsigned int val = 0;
         std::string val_str = params[0];
@@ -991,7 +993,8 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
                 std::cerr << "Error: invalid function name\n";
                 return 1;
             } else {
-                val = func_index;
+                int diff = func_index - pc;
+                val = diff & 0xFFFF;
             }
         } else {
             val = param_to_int(params[0]);
@@ -1019,15 +1022,78 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Jump If Direct, rs=" << rs << ", rcond=" << rcond << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
-    } else if (instr == "end") {
+    } else if (instr == "ret") {
         // Arguments: none
 
         instr_int |= 0x24 << 24;
 
         if (DEBUG_LEVEL >= 0) {
+            std::cout << "Return" << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "end") {
+        // Arguments: none
+
+        instr_int |= 0x25 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
             std::cout << "End" << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
-    } else if (instr == "storemd") { // 0000_0011_16-bits-addr_8-bits-rs
+    } else if (instr == "br") {
+        // Arguments: val
+        // val should be a function name
+
+        unsigned int val = 0;
+        std::string val_str = params[0];
+        if (!is_numeric(val_str[0])) {
+            // See if it's a function
+            int func_index = get_function_index(val_str);
+            if (func_index < 0) {
+                std::cerr << "Error: invalid function name\n";
+                return 1;
+            } else {
+                int diff = func_index - pc;
+                val = diff & 0xFFFF;
+            }
+        } else {
+            val = param_to_int(params[0]);
+        }
+
+        instr_int += val;
+        instr_int |= 0x26 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Branch, val=" << val << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "brif") {
+        // Arguments: val, rcond
+        // val should be a function name
+
+        unsigned int val = 0;
+        std::string val_str = params[0];
+        if (!is_numeric(val_str[0])) {
+            // See if it's a function
+            int func_index = get_function_index(val_str);
+            if (func_index < 0) {
+                std::cerr << "Error: invalid function name\n";
+                return 1;
+            } else {
+                int diff = func_index - pc;
+                val = diff & 0xFFFF;
+            }
+        } else {
+            val = param_to_int(params[0]);
+        }
+
+        unsigned int rcond = param_to_int(params[1]);
+
+        instr_int += val << 8;
+        instr_int += rcond;
+        instr_int |= 0x27 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Branch If, val=" << val << ", rcond=" << rcond << " --> " << get_instr_as_hex(instr_int) << "\n";
+        }
+    } else if (instr == "stored") { // 0000_0011_16-bits-addr_8-bits-rs
         // Arguments: addr, rs
 
         unsigned int addr = param_to_int(params[0]);
@@ -1038,9 +1104,9 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x03 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Store Immediate Direct, addr=" << addr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Store Direct, addr=" << addr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << "\n";
         }
-    } else if (instr == "loaddir") { // 0000_0100_8-bits-rd_16-bits-addr
+    } else if (instr == "loadd") { // 0000_0100_8-bits-rd_16-bits-addr
         // Arguments: rd, addr
 
         unsigned int rd = param_to_int(params[0]);
@@ -1063,7 +1129,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int += rd << 16;
         instr_int += rs1 << 8;
         instr_int += rs2;
-        instr_int |= 0x17 << 24;
+        instr_int |= 0x40 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Left Shift, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
@@ -1078,7 +1144,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int += rd << 16;
         instr_int += rs1 << 8;
         instr_int += rs2;
-        instr_int |= 0x18 << 24;
+        instr_int |= 0x41 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Right Shift, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
@@ -1093,7 +1159,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int += rd << 16;
         instr_int += rs1 << 8;
         instr_int += rs2;
-        instr_int |= 0x19 << 24;
+        instr_int |= 0x12 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Multiply, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
@@ -1108,7 +1174,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int += rd << 16;
         instr_int += rs1 << 8;
         instr_int += rs2;
-        instr_int |= 0x1A << 24;
+        instr_int |= 0x13 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Divide, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
@@ -1356,11 +1422,11 @@ unsigned int Yuasm::twos_complement(unsigned int val) {
 }
 
 int Yuasm::get_no_of_params_for_instr(std::string instr) {
-    if (instr == "loadimm") {
+    if (instr == "loadm") {
         return 2;
-    } else if (instr == "loadrin") {
+    } else if (instr == "loadr") {
         return 2;
-    } else if (instr == "store") {
+    } else if (instr == "storen") {
         return 2;
     } else if (instr == "add") {
         return 3;
@@ -1386,9 +1452,9 @@ int Yuasm::get_no_of_params_for_instr(std::string instr) {
         return 2;
     } else if (instr == "end") {
         return 0;
-    } else if (instr == "storemd") {
+    } else if (instr == "stored") {
         return 2;
-    } else if (instr == "loaddir") {
+    } else if (instr == "loadd") {
         return 2;
     } else if (instr == "lshift") {
         return 3;
@@ -1408,6 +1474,12 @@ int Yuasm::get_no_of_params_for_instr(std::string instr) {
         return 3;
     } else if (instr == "xor") {
         return 3;
+    } else if (instr == "ret") {
+        return 0;
+    } else if (instr == "br") {
+        return 1;
+    } else if (instr == "brif") {
+        return 2;
     }
     return -1;
 }

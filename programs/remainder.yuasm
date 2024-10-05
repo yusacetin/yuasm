@@ -9,11 +9,12 @@
 
 .main:
 
-loadimm a a_val
-loadimm b b_val
+loadm a a_val
+loadm b b_val
 
 div div_res a b
 mul mul_res div_res b
 
 sub res a mul_res
-storemd 0x100 res
+stored 0x100 res
+

@@ -1,3 +1,7 @@
+// A linker is necessary for this to work
+// Functions defined after the caller should be linkable
+// And programs should begin executing at the main function
+
 #define a 0
 #define b 1
 #define res0 2
@@ -5,53 +9,23 @@
 #define one 4
 #define zero 5
 #define c 6
+#define three 7
 
-loadimm a 32
-loadimm b 4
-loadimm one 1
-loadimm zero 0
+.init:
+loadm a 32
+loadm b 4
+loadm one 1
+loadm zero 0
+loadm c 200
+loadm three 3
 
-mul res0 a b
-div res1 a b
+// multiplies reg 6 by three
+.func:
+mul c c three
+ret
 
-lshift res0 res0 one
-rshift res1 res1 one
-
-//storemd 0x100 res0
-//storemd 0x104 res1
-
-// try logical
-
-and c one zero
-storemd 0x108 c
-
-and c one one
-storemd 0x10C c
-
-or c one zero
-storemd 0x110 c
-
-or c one one
-storemd 0x114 c
-
-nand c one zero
-storemd 0x118 c
-
-nand c one one
-storemd 0x11C c
-
-nor c one zero
-storemd 0x120 c
-
-nor c one one
-storemd 0x124 c
-
-xor c one zero
-storemd 0x128 c
-
-xor c one one
-storemd 0x12C c
-
-nor c zero zero
-storemd 0x130 c
+.main:
+stored 0x100 c
+br func
+stored 0x104 c
 
