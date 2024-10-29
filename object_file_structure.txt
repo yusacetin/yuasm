@@ -1,0 +1,14 @@
+Top-down structure: [32b N_defs] [DEF for each N_defs] [32b N_callers] [CALL for each N_callers] [instructions without symbol links]
+
+N_defs: 32 bits, number of symbol definitions (only section/function names can be symbols)
+N_callers: 32 bits, number of symbol callers
+
+DEF structure: [16b len] [symbol_name] [32b loc]
+
+len: 16 bits, length of the symbol name
+loc: 32 bits, program counter at where the symbol points to
+
+CALL structure: [16b len] [symbol_name] [32b loc]
+
+len: 16 bits, length of the symbol name
+loc: 32 bits, program counter at the control instruction that is expecting the symbol

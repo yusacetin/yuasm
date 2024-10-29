@@ -1,4 +1,6 @@
 #include "yuasm.hpp"
+#include "linker.hpp"
+
 #include <cctype>
 #include <iostream>
 #include <fstream>
@@ -11,6 +13,7 @@
 #include <iomanip>
 
 Yuasm::Yuasm(std::string first_fname) {
+    ofname = generate_ofname(first_fname);
     if (open_new_file(first_fname) == 0) {
         mainloop();
     }
@@ -725,7 +728,9 @@ int Yuasm::mainloop() {
         }
     }
 
-    write_binary();
+    write_object();
+    link_object();
+    // write_binary();
 
     if (DEBUG_LEVEL >= 1) {
         std::cout << "########\n\n";
@@ -950,7 +955,8 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         unsigned int val = 0;
         std::string val_str = params[0];
         if (!is_numeric(val_str[0])) {
-            // See if it's a function
+            // It's a function name
+            /*
             int func_index = get_function_index(val_str);
             if (func_index < 0) {
                 std::cerr << "Error: invalid function name\n";
@@ -959,6 +965,10 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
                 int diff = func_index - pc;
                 val = diff & 0xFFFF;
             }
+            */
+
+            callers.insert({val_str, pc});
+            val = 0;
         } else {
             val = param_to_int(params[0]);
         }
@@ -987,7 +997,8 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         unsigned int val = 0;
         std::string val_str = params[0];
         if (!is_numeric(val_str[0])) {
-            // See if it's a function
+            // It's a function name
+            /*
             int func_index = get_function_index(val_str);
             if (func_index < 0) {
                 std::cerr << "Error: invalid function name\n";
@@ -996,6 +1007,10 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
                 int diff = func_index - pc;
                 val = diff & 0xFFFF;
             }
+            */
+
+            callers.insert({val_str, pc});
+            val = 0;
         } else {
             val = param_to_int(params[0]);
         }
@@ -1045,7 +1060,8 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         unsigned int val = 0;
         std::string val_str = params[0];
         if (!is_numeric(val_str[0])) {
-            // See if it's a function
+            // It's a function name
+            /*
             int func_index = get_function_index(val_str);
             if (func_index < 0) {
                 std::cerr << "Error: invalid function name\n";
@@ -1054,6 +1070,10 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
                 int diff = func_index - pc;
                 val = diff & 0xFFFF;
             }
+            */
+
+            callers.insert({val_str, pc});
+            val = 0;
         } else {
             val = param_to_int(params[0]);
         }
@@ -1071,7 +1091,8 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         unsigned int val = 0;
         std::string val_str = params[0];
         if (!is_numeric(val_str[0])) {
-            // See if it's a function
+            // It's a function name
+            /*
             int func_index = get_function_index(val_str);
             if (func_index < 0) {
                 std::cerr << "Error: invalid function name\n";
@@ -1080,6 +1101,10 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
                 int diff = func_index - pc;
                 val = diff & 0xFFFF;
             }
+            */
+
+            callers.insert({val_str, pc});
+            val = 0;
         } else {
             val = param_to_int(params[0]);
         }
@@ -1271,8 +1296,9 @@ int Yuasm::open_new_file(std::string fname) {
     return 0;
 }
 
+/*
 int Yuasm::write_binary() {
-    std::ofstream bin_file("program.yubin", std::ios::binary);
+    std::ofstream bin_file("program.bin", std::ios::binary);
 
     for (int i=0; i<instructions.size(); i++) {
         unsigned int instr_int = instructions[i];
@@ -1289,6 +1315,140 @@ int Yuasm::write_binary() {
     }
 
     bin_file.close();
+    return 0;
+}
+*/
+
+int Yuasm::write_object() {
+    std::ofstream obj_file("objects/" + ofname, std::ios::binary);
+    unsigned char instr_bytes[4];
+
+    // Write N_defs
+
+    unsigned int N_defs = functions.size();
+
+    instr_bytes[0] = (N_defs) & 0xFF;
+    instr_bytes[1] = (N_defs >> 8) & 0xFF;
+    instr_bytes[2] = (N_defs >> 16) & 0xFF;
+    instr_bytes[3] = (N_defs >> 24) & 0xFF;
+
+    obj_file.write(reinterpret_cast<const char*>(&instr_bytes[3]), sizeof(instr_bytes[0]));
+    obj_file.write(reinterpret_cast<const char*>(&instr_bytes[2]), sizeof(instr_bytes[0]));
+    obj_file.write(reinterpret_cast<const char*>(&instr_bytes[1]), sizeof(instr_bytes[0]));
+    obj_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
+
+    // Write DEFs
+
+    for (std::map<std::string, int>::iterator it = functions.begin(); it != functions.end(); ++it) {
+        std::string symbol_name = it->first;
+        int len = symbol_name.size();
+        int loc = it->second;
+        
+        if (len > 65535) {
+            std::cerr << "Error: symbol name length must be at most 16 bits\n";
+            return 1;
+        }
+
+        // write len
+        instr_bytes[0] = (len) & 0xFF;
+        instr_bytes[1] = (len >> 8) & 0xFF;
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[1]), sizeof(instr_bytes[0]));
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
+
+        // write symbol_name
+        for (int i=0; i<len; i++) {
+            unsigned char cur_char = symbol_name[i];
+            obj_file.write(reinterpret_cast<const char*>(&cur_char), sizeof(cur_char));
+        }
+
+        // write loc
+
+        instr_bytes[0] = (loc) & 0xFF;
+        instr_bytes[1] = (loc >> 8) & 0xFF;
+        instr_bytes[2] = (loc >> 16) & 0xFF;
+        instr_bytes[3] = (loc >> 24) & 0xFF;
+
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[3]), sizeof(instr_bytes[0]));
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[2]), sizeof(instr_bytes[0]));
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[1]), sizeof(instr_bytes[0]));
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
+    }
+
+    // Write N_callers
+
+    unsigned int N_callers = callers.size();
+
+    instr_bytes[0] = (N_callers) & 0xFF;
+    instr_bytes[1] = (N_callers >> 8) & 0xFF;
+    instr_bytes[2] = (N_callers >> 16) & 0xFF;
+    instr_bytes[3] = (N_callers >> 24) & 0xFF;
+
+    obj_file.write(reinterpret_cast<const char*>(&instr_bytes[3]), sizeof(instr_bytes[0]));
+    obj_file.write(reinterpret_cast<const char*>(&instr_bytes[2]), sizeof(instr_bytes[0]));
+    obj_file.write(reinterpret_cast<const char*>(&instr_bytes[1]), sizeof(instr_bytes[0]));
+    obj_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
+
+    // Write CALLs
+
+    for (std::map<std::string, int>::iterator it = callers.begin(); it != callers.end(); ++it) {
+        std::string symbol_name = it->first;
+        int len = symbol_name.size();
+        int loc = it->second;
+        
+        if (len > 65535) {
+            std::cerr << "Error: symbol name length must be at most 16 bits\n";
+            return 1;
+        }
+
+        // write len
+        instr_bytes[0] = (len) & 0xFF;
+        instr_bytes[1] = (len >> 8) & 0xFF;
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[1]), sizeof(instr_bytes[0]));
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
+
+        // write symbol_name
+        for (int i=0; i<len; i++) {
+            unsigned char cur_char = symbol_name[i];
+            obj_file.write(reinterpret_cast<const char*>(&cur_char), sizeof(cur_char));
+        }
+
+        // write loc
+
+        instr_bytes[0] = (loc) & 0xFF;
+        instr_bytes[1] = (loc >> 8) & 0xFF;
+        instr_bytes[2] = (loc >> 16) & 0xFF;
+        instr_bytes[3] = (loc >> 24) & 0xFF;
+
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[3]), sizeof(instr_bytes[0]));
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[2]), sizeof(instr_bytes[0]));
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[1]), sizeof(instr_bytes[0]));
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
+    }
+
+    // Write instructions
+
+    for (int i=0; i<instructions.size(); i++) {
+        unsigned int instr_int = instructions[i];
+        unsigned char instr_bytes[4];
+        instr_bytes[0] = (instr_int) & 0xFF;
+        instr_bytes[1] = (instr_int >> 8) & 0xFF;
+        instr_bytes[2] = (instr_int >> 16) & 0xFF;
+        instr_bytes[3] = (instr_int >> 24) & 0xFF;
+
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[3]), sizeof(instr_bytes[0]));
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[2]), sizeof(instr_bytes[0]));
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[1]), sizeof(instr_bytes[0]));
+        obj_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
+    }
+
+    obj_file.close();
+    return 0;
+}
+
+int Yuasm::link_object() {
+    std::vector<std::string> obj_vec;
+    obj_vec.push_back("objects/" + ofname);
+    Linker linker(obj_vec);
     return 0;
 }
 
@@ -1516,4 +1676,12 @@ std::string Yuasm::get_instr_as_hex(unsigned int instr_int) {
     << std::setw(2) << std::setfill('0') << (int)instr_bytes[0];
 
     return ss.str();
+}
+
+std::string Yuasm::generate_ofname(std::string fpath) {
+    size_t last_slash_pos = fpath.find_last_of("/\\");
+    std::string fname = (last_slash_pos == std::string::npos) ? fpath : fpath.substr(last_slash_pos + 1);
+    size_t last_dot_pos = fname.find_last_of('.');
+    std::string fname_noext = (last_dot_pos == std::string::npos) ? fname : fname.substr(0, last_dot_pos);
+    return fname_noext + ".o";
 }

@@ -1,0 +1,8 @@
+#define d 200
+#define e 201
+#define f 202
+
+.my_mul:
+mul d e f
+ret
+

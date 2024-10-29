@@ -1,1 +1,1 @@
-g++ yuasm_main.cpp yuasm.cpp -o yuasm
+g++ yuasm_main.cpp yuasm.cpp linker.cpp -o yuasm

@@ -56,9 +56,11 @@ class Yuasm {
         std::vector<std::string> params; // for instruction parameters
         std::vector<unsigned int> instructions;
 
+        std::string ofname;
         std::stack<std::unique_ptr<std::ifstream>> files;
         std::map<std::string, std::string> macros;
         std::map<std::string, int> functions; // should be called sections really
+        std::multimap<std::string, int> callers; // caller positions
         int pc = 0; // program counter
 
         int state_before_block_comment; // TODO not properly implemented
@@ -71,7 +73,9 @@ class Yuasm {
         std::string print_state();
         int eval_instr(std::string instr, std::vector<std::string> params);
         int get_function_index(std::string func);
-        int write_binary();
+        // int write_binary();
+        int write_object();
+        int link_object();
 
         static void expand_macro(std::vector<char>* buffer, std::map<std::string, std::string> macro_list);
         static const int get_category(char ch);
@@ -83,4 +87,5 @@ class Yuasm {
         static unsigned int get_hex_value(char c);
         static std::string get_instr_as_hex(unsigned int instr_int);
         static unsigned int twos_complement(unsigned int val);
+        static std::string generate_ofname(std::string fpath);
 };
