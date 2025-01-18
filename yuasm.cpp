@@ -12,6 +12,8 @@
 #include <cmath>
 #include <iomanip>
 
+#define newl "\n"
+
 Yuasm::Yuasm(std::string first_fname) {
     ofname = generate_ofname(first_fname);
     if (open_new_file(first_fname) == 0) {
@@ -28,6 +30,8 @@ int Yuasm::mainloop() {
             buffer1.clear();
             params.clear();
             files.pop();
+            fnames.pop();
+            line_counters.pop();
             continue;
         }
 
@@ -71,7 +75,8 @@ int Yuasm::mainloop() {
                     case COMMA:
                     case COLON:
                     case AST: {
-                        std::cerr << "Error: invalid character\n";
+                        print_line_to_std_err();
+                        std::cerr << "Error: invalid character: " << ch << newl;
                         return 1;
                     }
 
@@ -183,6 +188,7 @@ int Yuasm::mainloop() {
                 switch (category) {
                     case LF:
                     case CR: { // these are invalid, we expect a keyword
+                        print_line_to_std_err();
                         std::cerr << "Error: expected keyword for preprocessing directive\n";
                         return 1;
                     }
@@ -196,6 +202,7 @@ int Yuasm::mainloop() {
                         if (buffer0.size() > 0) {
                             buffer0.push_back(ch);
                         } else {
+                            print_line_to_std_err();
                             std::cerr << "Error: identifiers can't begin with numbers\n";
                             return 1;
                         }
@@ -212,14 +219,16 @@ int Yuasm::mainloop() {
                             state = SCAN_INCLUDE_FPATH;
                             buffer0.clear();
                         } else {
-                            std::cerr << "Error: invalid preprocessor directive\n";
+                            print_line_to_std_err();
+                            std::cerr << "Error: invalid preprocessor directive: " << buffer_str << newl;
                             return 1;
                         }
                         break;
                     }
 
                     default: {
-                        std::cerr << "Error: invalid character for preprocessor directive key\n";
+                        print_line_to_std_err();
+                        std::cerr << "Error: invalid character for preprocessor directive key: " << ch << newl;
                         break;
                     }
                 }
@@ -232,6 +241,7 @@ int Yuasm::mainloop() {
                 switch (category) {
                     case LF:
                     case CR: { // these are invalid, we expect a parameter
+                        print_line_to_std_err();
                         std::cerr << "Error: expected macro name for preprocessing directive\n";
                         return 1;
                     }
@@ -245,6 +255,7 @@ int Yuasm::mainloop() {
                         if (buffer0.size() > 0) {
                             buffer0.push_back(ch);
                         } else {
+                            print_line_to_std_err();
                             std::cerr << "Error: identifiers can't begin with numbers\n";
                             return 1;
                         }
@@ -264,7 +275,8 @@ int Yuasm::mainloop() {
                     }
 
                     default: {
-                        std::cerr << "Error: invalid character for macro name\n";
+                        print_line_to_std_err();
+                        std::cerr << "Error: invalid character for macro name: " << ch << newl;
                         return 1;
                     }
                 }
@@ -285,7 +297,8 @@ int Yuasm::mainloop() {
                         if (buffer1.size() == 0) { // only the first character can be dash
                             buffer1.push_back(ch);
                         } else {
-                            std::cerr << "Error: invalid character for macro value: " << ch << "\n";
+                            print_line_to_std_err();
+                            std::cerr << "Error: invalid character for macro value: " << ch << newl;
                             return 1;
                         }
                         break;
@@ -320,7 +333,8 @@ int Yuasm::mainloop() {
                     }
 
                     default: {
-                        std::cerr << "Error: invalid character for macro value: " << ch << "\n";
+                        print_line_to_std_err();
+                        std::cerr << "Error: invalid character for macro value: " << ch << newl;
                         return 1;
                     }
                 }
@@ -350,10 +364,13 @@ int Yuasm::mainloop() {
                         std::string fpath(buffer0.begin(), buffer0.end());
                         std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>(fpath);
                         if (!(*file)) {
+                            print_line_to_std_err();
                             std::cerr << "Error: file not found: " << fpath << std::endl;
                             return 1;
                         }
                         files.push(std::move(file));
+                        line_counters.push(1);
+                        fnames.push(fpath);
 
                         buffer0.clear();
                         state = SCAN_FIRST;
@@ -366,6 +383,7 @@ int Yuasm::mainloop() {
                     }
 
                     default: { // EOF
+                        print_line_to_std_err();
                         std::cerr << "Error: invalid file name\n";
                         return -1;
                     }
@@ -380,6 +398,7 @@ int Yuasm::mainloop() {
                     case SC:
                     case LF:
                     case CR: { // these are invalid, we expect a function name
+                        print_line_to_std_err();
                         std::cerr << "Error: expected function name\n";
                         return 1;
                     }
@@ -387,6 +406,7 @@ int Yuasm::mainloop() {
                     case AL: { // scan the name
                         // Disallow characters after trailing spaces
                         if (trailing_spaces_only) {
+                            print_line_to_std_err();
                             std::cerr << "Error: expected only one identifier\n";
                             return 1;
                         }
@@ -399,12 +419,14 @@ int Yuasm::mainloop() {
                         if (buffer0.size() > 0) {
                             // Disallow characters after trailing spaces
                             if (trailing_spaces_only) {
+                                print_line_to_std_err();
                                 std::cerr << "Error: expected only one identifier\n";
                                 return 1;
                             }
 
                             buffer0.push_back(ch);
                         } else {
+                            print_line_to_std_err();
                             std::cerr << "Error: identifiers can't begin with numbers\n";
                             return 1;
                         }
@@ -421,7 +443,7 @@ int Yuasm::mainloop() {
 
                         if (DEBUG_LEVEL >= 1) {
                             std::cout << "# Function Definition Complete #\n";
-                            std::cout << "Function name: " << buffer_str << "\n";
+                            std::cout << "Function name: " << buffer_str << newl;
                             std::cout << "Function address: " << pc << "\n\n";
                         }
                         break;
@@ -438,7 +460,8 @@ int Yuasm::mainloop() {
                     }
 
                     default: {
-                        std::cerr << "Error: invalid character for function name\n";
+                        print_line_to_std_err();
+                        std::cerr << "Error: invalid character for function name: " << ch << newl;
                         return 1;
                     }
                 }
@@ -472,6 +495,7 @@ int Yuasm::mainloop() {
                         if (buffer0.size() > 0) {
                             buffer0.push_back(ch);
                         } else {
+                            print_line_to_std_err();
                             std::cerr << "Error: identifiers can't begin with numbers\n";
                             return 1;
                         }
@@ -486,7 +510,8 @@ int Yuasm::mainloop() {
                         if (get_no_of_params_for_instr(buffer_str) >= 0) { // means instruction is valid
                             state = SCAN_PARAMS;
                         } else {
-                            std::cerr << "Error: invalid instruction: " << buffer_str << "\n";
+                            print_line_to_std_err();
+                            std::cerr << "Error: invalid instruction (1): " << buffer_str << newl;
                             return 1;
                         }
                         break;
@@ -502,7 +527,8 @@ int Yuasm::mainloop() {
                     }
 
                     default: {
-                        std::cerr << "Error: invalid character for instruction or macro\n";
+                        print_line_to_std_err();
+                        std::cerr << "Error: invalid character for instruction or macro: " << ch << newl;
                         return 1;
                     }
                 }
@@ -528,6 +554,7 @@ int Yuasm::mainloop() {
 
                     // No spaces or anything between the parentheses
                     default: {
+                        print_line_to_std_err();
                         std::cerr << "Error: expected ')'\n";
                         return 1;
                     }
@@ -546,6 +573,7 @@ int Yuasm::mainloop() {
                     case SC: {
                         // Trailing commas after the last parameter are not allowed
                         if (used_comma) {
+                            print_line_to_std_err();
                             std::cerr << "Error: trailing commas are not allowed\n";
                             return 1;
                         }
@@ -567,7 +595,7 @@ int Yuasm::mainloop() {
                             buffer1.clear();
 
                             if (DEBUG_LEVEL >= 2) {
-                                std::cout << "Added parameter: " << param << "\n"; // DEBUG
+                                std::cout << "Added parameter: " << param << newl; // DEBUG
                             }
                         }
 
@@ -594,6 +622,7 @@ int Yuasm::mainloop() {
 
                     case DASH: {
                         if (used_dash) {
+                            print_line_to_std_err();
                             std::cerr << "Error: double negation is not allowed\n";
                             return 1;
                         }
@@ -629,7 +658,7 @@ int Yuasm::mainloop() {
                         buffer1.clear();
 
                         if (DEBUG_LEVEL >= 2) {
-                            std::cout << "Added param: " << param << "\n"; // DEBUG
+                            std::cout << "Added param: " << param << newl; // DEBUG
                         }
                         break;
                     }
@@ -639,6 +668,7 @@ int Yuasm::mainloop() {
                     case COMMA: {
                         // Disallow comma after negative sign
                         if (used_dash) {
+                            print_line_to_std_err();
                             std::cerr << "Error: comma after negative sign is not allowed\n";
                             return 1;
                         }
@@ -658,13 +688,14 @@ int Yuasm::mainloop() {
                             buffer1.clear();
 
                             if (DEBUG_LEVEL >= 2) {
-                                std::cout << "Added param: " << param << "\n"; // DEBUG
+                                std::cout << "Added param: " << param << newl; // DEBUG
                             }
                             break;
                         }
 
                         // Disallow multiple commas
                         if (used_comma) {
+                            print_line_to_std_err();
                             std::cerr << "Error: invalid parameter (only one comma between parameters is allowed)\n";
                             return 1;
                         }
@@ -672,6 +703,7 @@ int Yuasm::mainloop() {
 
                         // Disallow comma before first parameter
                         if (params.size() == 0) {
+                            print_line_to_std_err();
                             std::cerr << "Error: comma before the first parameter is not allowed\n";
                             return 1;
                         }
@@ -698,7 +730,7 @@ int Yuasm::mainloop() {
                             buffer1.clear();
 
                             if (DEBUG_LEVEL >= 2) {
-                                std::cout << "Added param: " << param << "\n"; // DEBUG
+                                std::cout << "Added param: " << param << newl; // DEBUG
                             }
                         }
 
@@ -719,32 +751,39 @@ int Yuasm::mainloop() {
                     }
 
                     default: {
-                        std::cerr << "Error: invalid character\n";
+                        print_line_to_std_err();
+                        std::cerr << "Error: invalid character: " << ch << newl;
                         return 1;
                     }
                 }
                 break;
             }
         }
+
+        if (ch == '\n') {
+            line_buffer.clear();
+            line_counters.top()++;
+        } else {
+            line_buffer.push_back(ch); // used to print error info
+        }
     }
 
     write_object();
     link_object();
-    // write_binary();
 
     if (DEBUG_LEVEL >= 1) {
         std::cout << "########\n\n";
         std::cout << "List of Macros:\n";
         for (auto it = macros.begin(); it != macros.end(); ++it) {
-            std::cout << "Key: " << it->first << ", Value: " << it->second << "\n";
+            std::cout << "Key: " << it->first << ", Value: " << it->second << newl;
         }
 
-        std::cout << "\n";
+        std::cout << newl;
         std::cout << "List of Functions:\n";
         for (auto it = functions.begin(); it != functions.end(); ++it) {
-            std::cout << "Function: " << it->first << ", Address: " << it->second << "\n";
+            std::cout << "Function: " << it->first << ", Address: " << it->second << newl;
         }
-        std::cout << "\n";
+        std::cout << newl;
     }
 
     return 0;
@@ -753,28 +792,31 @@ int Yuasm::mainloop() {
 int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     if (DEBUG_LEVEL >= 1) {
         std::cout << "# Instruction Complete #\n";
-        std::cout << "Instruction: " << instr << "\n";
+        std::cout << "Instruction: " << instr << newl;
         for (int i=0; i<params.size(); i++) {
-            std::cout << "Parameter: " << params[i] << "\n";
+            std::cout << "Parameter: " << params[i] << newl;
         }
-        std::cout << "\n";
+        std::cout << newl;
     }
 
     int no_of_params = get_no_of_params_for_instr(instr);
     if (no_of_params < 0) {
-        std::cerr << "Error: invalid instruction: " << instr << "\n";
+        print_line_to_std_err();
+        std::cerr << "Error: invalid instruction (2): " << instr << newl;
         return 1;
     }
 
     if (no_of_params != params.size()) {
-        std::cerr << "Error: expected " << no_of_params << " arguments, got " << params.size() << "\n";
+        print_line_to_std_err();
+        std::cerr << "Error: expected " << no_of_params << " arguments, got " << params.size() << newl;
         return 1;
     }
 
     for (int i=0; i<params.size(); i++) { // check for illegal negatives
         if (params[i][0] == '-') {
             if (instr != "loadm") {
-                std::cerr << "Error: parameter can not be negative: " << params[i] << "\n";
+                print_line_to_std_err();
+                std::cerr << "Error: parameter can not be negative: " << params[i] << newl;
                 return 1;
             }
         }
@@ -790,6 +832,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         // Arguments: rd, val
 
         if (params[0][0] == '-') {
+            print_line_to_std_err();
             std::cerr << "Error: rd value can not be negative\n";
             return 1;
         }
@@ -797,9 +840,9 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         bool neg = false;
         if (params[1][0] == '-') {
             neg = true;
-            //std::cout << "old params 1: " << params[1] << "\n";
+            //std::cout << "old params 1: " << params[1] << newl;
             params[1] = params[1].substr(1);
-            //std::cout << "new params 1: " << params[1] << "\n";
+            //std::cout << "new params 1: " << params[1] << newl;
         }
 
         unsigned int rd = param_to_int(params[0]);
@@ -812,7 +855,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int += val;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Load Immediate, rd=" << rd << ", val=" << val << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Load Immediate, rd=" << rd << ", val=" << val << " --> " << get_instr_as_hex(instr_int) << newl;
         }
 
     } else if (instr == "loadr") {
@@ -826,7 +869,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x01 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Load Direct, rd=" << rd << ", raddr=" << raddr << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Load Direct, rd=" << rd << ", raddr=" << raddr << " --> " << get_instr_as_hex(instr_int) << newl;
         }
 
     } else if (instr == "storen") {
@@ -840,7 +883,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x02 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Store Indirect, raddr=" << raddr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Store Indirect, raddr=" << raddr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << newl;
         }
 
     } else if (instr == "add") {
@@ -856,7 +899,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x10 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Add, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Add, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "sub") {
         // Arguments: rd, rs1, rs2
@@ -871,7 +914,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x11 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Subtract, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Subtract, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "lt") {
         // Arguments: rd, rs1, rs2
@@ -886,7 +929,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x50 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Less Than, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Less Than, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "lte") {
         // Arguments: rd, rs1, rs2
@@ -901,7 +944,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x51 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Less Than or Equal To, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Less Than or Equal To, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "gt") {
         // Arguments: rd, rs1, rs2
@@ -916,7 +959,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x52 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Greater Than, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Greater Than, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "gte") {
         // Arguments: rd, rs1, rs2
@@ -931,7 +974,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x53 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Greater Than or Equal To, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Greater Than or Equal To, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "eq") {
         // Arguments: rd, rs1, rs2
@@ -946,7 +989,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x54 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Equal To, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Equal To, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "jump") {
         // Arguments: val
@@ -977,7 +1020,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x20 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Jump To Section, val=" << val << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Jump To Section, val=" << val << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "jumpd") {
         // Arguments: rs
@@ -988,7 +1031,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x21 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Jump Direct, rs=" << rs << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Jump Direct, rs=" << rs << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "jumpif") {
         // Arguments: val, rcond
@@ -1022,7 +1065,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x22 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Jump If Immediate, val=" << val << ", rcond=" << rcond << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Jump If Immediate, val=" << val << ", rcond=" << rcond << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "jumpifd") {
         // Arguments: rs, rcond
@@ -1035,7 +1078,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x23 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Jump If Direct, rs=" << rs << ", rcond=" << rcond << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Jump If Direct, rs=" << rs << ", rcond=" << rcond << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "ret") {
         // Arguments: none
@@ -1043,7 +1086,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x24 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Return" << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Return" << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "end") {
         // Arguments: none
@@ -1051,7 +1094,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x25 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "End" << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "End" << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "br") {
         // Arguments: val
@@ -1082,7 +1125,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x26 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Branch, val=" << val << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Branch, val=" << val << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "brif") {
         // Arguments: val, rcond
@@ -1116,7 +1159,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x27 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Branch If, val=" << val << ", rcond=" << rcond << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Branch If, val=" << val << ", rcond=" << rcond << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "stored") { // 0000_0011_16-bits-addr_8-bits-rs
         // Arguments: addr, rs
@@ -1129,7 +1172,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x03 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Store Direct, addr=" << addr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Store Direct, addr=" << addr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "loadd") { // 0000_0100_8-bits-rd_16-bits-addr
         // Arguments: rd, addr
@@ -1142,7 +1185,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x04 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Load Direct, rd=" << rd << ", addr=" << addr << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Load Direct, rd=" << rd << ", addr=" << addr << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "lshift") {
         // Arguments: rd, rs1, rs2
@@ -1157,7 +1200,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x40 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Left Shift, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Left Shift, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "rshift") {
         // Arguments: rd, rs1, rs2
@@ -1172,7 +1215,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x41 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Right Shift, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Right Shift, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "mul") {
         // Arguments: rd, rs1, rs2
@@ -1187,7 +1230,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x12 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Multiply, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Multiply, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "div") {
         // Arguments: rd, rs1, rs2
@@ -1202,7 +1245,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x13 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Divide, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Divide, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "and") {
         // Arguments: rd, rs1, rs2
@@ -1217,7 +1260,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x30 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "And, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "And, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "or") {
         // Arguments: rd, rs1, rs2
@@ -1232,7 +1275,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x31 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Or, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Or, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "nand") {
         // Arguments: rd, rs1, rs2
@@ -1247,7 +1290,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x32 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Nand, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Nand, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "nor") {
         // Arguments: rd, rs1, rs2
@@ -1262,7 +1305,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x33 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Nor, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Nor, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     } else if (instr == "xor") {
         // Arguments: rd, rs1, rs2
@@ -1277,7 +1320,7 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         instr_int |= 0x34 << 24;
 
         if (DEBUG_LEVEL >= 0) {
-            std::cout << "Xor, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << "\n";
+            std::cout << "Xor, rd=" << rd << ", rs1=" << rs1 << ", rs2=" << rs2 << " --> " << get_instr_as_hex(instr_int) << newl;
         }
     }
 
@@ -1289,35 +1332,15 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
 int Yuasm::open_new_file(std::string fname) {
     std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>(fname);
     if (!(*file)) {
+        print_line_to_std_err();
         std::cerr << "Error: file not found" << std::endl;
         return 1;
     }
     files.push(std::move(file));
+    fnames.push(fname);
+    line_counters.push(1);
     return 0;
 }
-
-/*
-int Yuasm::write_binary() {
-    std::ofstream bin_file("program.bin", std::ios::binary);
-
-    for (int i=0; i<instructions.size(); i++) {
-        unsigned int instr_int = instructions[i];
-        unsigned char instr_bytes[4];
-        instr_bytes[0] = (instr_int) & 0xFF;
-        instr_bytes[1] = (instr_int >> 8) & 0xFF;
-        instr_bytes[2] = (instr_int >> 16) & 0xFF;
-        instr_bytes[3] = (instr_int >> 24) & 0xFF;
-
-        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[3]), sizeof(instr_bytes[0]));
-        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[2]), sizeof(instr_bytes[0]));
-        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[1]), sizeof(instr_bytes[0]));
-        bin_file.write(reinterpret_cast<const char*>(&instr_bytes[0]), sizeof(instr_bytes[0]));
-    }
-
-    bin_file.close();
-    return 0;
-}
-*/
 
 int Yuasm::write_object() {
     std::ofstream obj_file("objects/" + ofname, std::ios::binary);
@@ -1345,6 +1368,7 @@ int Yuasm::write_object() {
         int loc = it->second;
         
         if (len > 65535) {
+            print_line_to_std_err();
             std::cerr << "Error: symbol name length must be at most 16 bits\n";
             return 1;
         }
@@ -1396,6 +1420,7 @@ int Yuasm::write_object() {
         int loc = it->second;
         
         if (len > 65535) {
+            print_line_to_std_err();
             std::cerr << "Error: symbol name length must be at most 16 bits\n";
             return 1;
         }
@@ -1480,6 +1505,28 @@ std::string Yuasm::print_state() {
     }
 }
 
+void Yuasm::print_line_to_std_err() {
+    if ((*(files.top())).eof()) {
+        std::cerr << fnames.top() << " line " << line_counters.top() << ": " << std::string(line_buffer.data(), line_buffer.size()) << newl;
+        return;
+    }
+
+    // Read until the end of the line
+    (*(files.top())).seekg(-1, std::ios::cur); // because we also want to catch the current character
+    char ch;
+    while (!(*(files.top())).eof() && ch != '\n') {
+        (*(files.top())).get(ch);
+        if (ch == '\n') {
+            break;
+        }
+        line_buffer.push_back(ch);
+    }
+    
+    std::cerr << fnames.top() << " line " << line_counters.top() << ": " << std::string(line_buffer.data(), line_buffer.size()) << newl;
+
+    line_buffer.clear(); // in case we want to keep the program running
+}
+
 // Static functions
 
 unsigned int Yuasm::param_to_int(std::string param) {
@@ -1509,19 +1556,19 @@ unsigned int Yuasm::param_to_int(std::string param) {
         unsigned int digit_value;
         if (radix == 10) {
             if (!is_numeric(digit_char)) {
-                std::cerr << "Error: invalid decimal number: " << param << "\n";
+                std::cerr << "Error: invalid decimal number: " << param << newl;
                 return 0; // TODO handle properly
             }
             digit_value = digit_char - '0';
         } else if (radix == 16) {
             if (!is_hex_digit(digit_char)) {
-                std::cerr << "Error: invalid hexadecimal number: " << param << "\n";
+                std::cerr << "Error: invalid hexadecimal number: " << param << newl;
                 return 0; // TODO handle properly
             }
             digit_value = get_hex_value(digit_char);
         } else if (radix == 2) {
             if (digit_char != '0' && digit_char != '1') {
-                std::cerr << "Error: invalid binary number: " << param << "\n";
+                std::cerr << "Error: invalid binary number: " << param << newl;
                 return 0; // TODO handle properly
             }
             digit_value = digit_char - '0';

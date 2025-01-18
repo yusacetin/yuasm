@@ -55,6 +55,9 @@ class Yuasm {
         std::vector<char> buffer1; // for macro values and instruction parameters
         std::vector<std::string> params; // for instruction parameters
         std::vector<unsigned int> instructions;
+        std::vector<char> line_buffer; // used in error messages
+        std::stack<int> line_counters; // used in error messages (a counter per file)
+        std::stack<std::string> fnames; // used in error messages
 
         std::string ofname;
         std::stack<std::unique_ptr<std::ifstream>> files;
@@ -73,9 +76,9 @@ class Yuasm {
         std::string print_state();
         int eval_instr(std::string instr, std::vector<std::string> params);
         int get_function_index(std::string func);
-        // int write_binary();
         int write_object();
         int link_object();
+        void print_line_to_std_err();
 
         static void expand_macro(std::vector<char>* buffer, std::map<std::string, std::string> macro_list);
         static const int get_category(char ch);
