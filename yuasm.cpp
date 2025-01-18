@@ -42,7 +42,7 @@ int Yuasm::mainloop() {
         int category = get_category(ch);
 
         if (DEBUG_LEVEL >= 2) {
-            std::cout << "Ch: " << ch << ", State: " << print_state() << ", Category: " << category << std::endl; // DEBUG
+            std::cout << "Ch: " << ch << ", State: " << print_state() << ", Category: " << category << ",PC: " << pc << newl; // DEBUG
         }
 
         // Main FSM
@@ -56,7 +56,7 @@ int Yuasm::mainloop() {
                     }
 
                     case DOT: {
-                        state = SCAN_FUNC_HEAD;
+                        state = SCAN_FUNC_LEAD;
                         break;
                     }
 
@@ -66,23 +66,89 @@ int Yuasm::mainloop() {
                     }
 
                     case SLASH: {
+                        state_before_block_comment = state;
                         state = COMMENT_SCAN_BEGIN;
-                        state_before_block_comment = SCAN_FIRST; // won't be used if line comment
                         break;
                     }
 
                     case NUM:
                     case COMMA:
                     case COLON:
+                    case SC:
                     case AST: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character: " << ch << newl;
                         return 1;
                     }
 
-                    // Don't Care: SP, LF, CR, EOF, SC
+                    // Don't Care: SP, LF, CR, EOF
                     // (maybe) TODO make SC invalid unless specifically at the end of a line
                     // -> also maybe make only one SC valid per end of line
+                }
+                break;
+            }
+
+
+
+            case SC_OR_COMMENT_UNTIL_LF: {
+                switch (category) {
+                    case SLASH: {
+                        state_before_block_comment = state;
+                        state = COMMENT_SCAN_BEGIN;
+                        break;
+                    }
+
+                    case SC: {
+                        state = NOTHING_OR_COMMENT_UNTIL_LF;
+                        break;
+                    }
+
+                    case LF: {
+                        state = SCAN_FIRST;
+                        break;
+                    }
+
+                    case SP:
+                    case CR: {
+                        // don't care
+                        break;
+                    }
+
+                    default: {
+                        print_line_to_std_err();
+                        std::cerr << "Error: invalid character: " << ch << ", expected semicolon, comment, or new line" << newl;
+                        return 1;
+                    }
+                }
+                break;
+            }
+
+
+
+            case NOTHING_OR_COMMENT_UNTIL_LF: {
+                switch (category) {
+                    case SLASH: {
+                        state_before_block_comment = state;
+                        state = COMMENT_SCAN_BEGIN;
+                        break;
+                    }
+
+                    case LF: {
+                        state = SCAN_FIRST;
+                        break;
+                    }
+
+                    case SP:
+                    case CR: {
+                        // don't care
+                        break;
+                    }
+
+                    default: {
+                        print_line_to_std_err();
+                        std::cerr << "Error: invalid character: " << ch  << "(" << (int) ch << ")" << ", expected comment or new line" << newl;
+                        return 1;
+                    }
                 }
                 break;
             }
@@ -110,7 +176,8 @@ int Yuasm::mainloop() {
                     }
 
                     default: {
-                        std::cout << "Error: expected '/' or '*'\n";
+                        print_line_to_std_err();
+                        std::cerr << "Error: expected '/' or '*' but got " << ch << "(" << (int) ch << ")" << newl;
                         return 1;
                     }
                 }
@@ -147,7 +214,8 @@ int Yuasm::mainloop() {
 
 
 
-            case LINE_COMMENT_END: {
+            case LINE_COMMENT_END: { // useless state
+                std::cout << "[TODO] useless state LINE_COMMENT_END" << newl;
                 switch (category) {
                     case SLASH: {
                         state = SCAN_FIRST;
@@ -210,13 +278,26 @@ int Yuasm::mainloop() {
                     }
 
                     // We can't have spaces before the keyword, it has to be connected to the '#'
+                    case SLASH:
                     case SP: {
+                        if (category == SLASH) {
+                            if (get_next_char_category() == AST) {
+                                state_before_block_comment = state;
+                                state = COMMENT_SCAN_BEGIN;
+                                break;
+                            } else {
+                                print_line_to_std_err();
+                                std::cerr << "Error: expected parameters for preprocessor directive" << newl;
+                                return 1;
+                            }
+                        }
+
                         std::string buffer_str(buffer0.begin(), buffer0.end());
                         if (buffer_str == "define") {
                             state = SCAN_PREPROC_SUB;
                             buffer0.clear();
                         } else if (buffer_str == "include") {
-                            state = SCAN_INCLUDE_FPATH;
+                            state = SCAN_INCLUDE_LEAD;
                             buffer0.clear();
                         } else {
                             print_line_to_std_err();
@@ -229,7 +310,7 @@ int Yuasm::mainloop() {
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character for preprocessor directive key: " << ch << newl;
-                        break;
+                        return 1;
                     }
                 }
                 break;
@@ -259,6 +340,18 @@ int Yuasm::mainloop() {
                             std::cerr << "Error: identifiers can't begin with numbers\n";
                             return 1;
                         }
+                        break;
+                    }
+
+                    case SLASH: {
+                        if (get_next_char_category() == AST) {
+                            state_before_block_comment = state;
+                            state = COMMENT_SCAN_BEGIN;
+                            break;
+                        }
+
+                        std::string buffer_str(buffer0.begin(), buffer0.end());
+                        state = SCAN_PREPROC_VAL;
                         break;
                     }
 
@@ -304,10 +397,18 @@ int Yuasm::mainloop() {
                         break;
                     }
 
+                    case SLASH:
                     case LF:
                     case CR:
-                    case SC:
                     case SP: {
+                        if (category == SLASH) {
+                            if (get_next_char_category() == AST) {
+                                state_before_block_comment = state;
+                                state = COMMENT_SCAN_BEGIN;
+                                break;
+                            }
+                        }
+                        
                         if (category == SP) {
                             // There can be as many spaces as desired before the parameter begins
                             // But after the parameter ends we switch to the next state
@@ -323,13 +424,26 @@ int Yuasm::mainloop() {
 
                         buffer0.clear();
                         buffer1.clear();
-                        state = SCAN_FIRST;
+
+                        if (category == LF) {
+                            state = SCAN_FIRST;
+                        } else if (category == SLASH) {
+                            state = COMMENT_SCAN_BEGIN; // guaranteed to be line comment
+                        } else {
+                            state = SC_OR_COMMENT_UNTIL_LF;
+                        }
 
                         if (DEBUG_LEVEL >= 1) {
                             std::cout << "# Macro Definition Complete #\n"; // DEBUG
                             std::cout << "Key: " << macro_name << ", Value: " << macro_val << "\n\n";
                         }
                         break;
+                    }
+
+                    case SC: {
+                        print_line_to_std_err();
+                        std::cerr << "Error: semicolon not allowed after preprocessor directives" << newl;
+                        return 1;
                     }
 
                     default: {
@@ -343,6 +457,40 @@ int Yuasm::mainloop() {
 
             
 
+            case SCAN_INCLUDE_LEAD: {
+                switch (category) {
+                    case SP: {
+                        break; // allow leading spaces
+                    }
+
+                    case QUOTE: {
+                        state = SCAN_INCLUDE_FPATH;
+                        break;
+                    }
+
+                    case SLASH: {
+                        if (get_next_char_category() == AST) {
+                            state_before_block_comment = state;
+                            state = COMMENT_SCAN_BEGIN;
+                            break;
+                        }
+
+                        print_line_to_std_err();
+                        std::cerr << "Error: expected double quote mark ('\"') but got '/'" << newl;
+                        return 1;
+                    }
+
+                    default: {
+                        print_line_to_std_err();
+                        std::cerr << "Error: invalid character: " << ch << newl;
+                        return 1;
+                    }
+                }
+                break;
+            }
+
+
+
             case SCAN_INCLUDE_FPATH: {
                 switch (category) {
                     case AL:
@@ -353,14 +501,13 @@ int Yuasm::mainloop() {
                     case SC: // No SC at the end of include lines
                     case AST:
                     case SLASH:
+                    case SP:
                     case HASH: {
                         buffer0.push_back(ch);
                         break;
                     }
-
-                    case SP:
-                    case LF:
-                    case CR: {
+                    
+                    case QUOTE: {
                         std::string fpath(buffer0.begin(), buffer0.end());
                         std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>(fpath);
                         if (!(*file)) {
@@ -370,6 +517,7 @@ int Yuasm::mainloop() {
                         }
                         files.push(std::move(file));
                         line_counters.push(1);
+                        line_buffer.clear();
                         fnames.push(fpath);
 
                         buffer0.clear();
@@ -393,53 +541,80 @@ int Yuasm::mainloop() {
 
 
 
-            case SCAN_FUNC_HEAD: {
+            case SCAN_FUNC_LEAD: {
                 switch (category) {
-                    case SC:
-                    case LF:
-                    case CR: { // these are invalid, we expect a function name
+                    case SP: {
+                        break; // allow leading spaces
+                    }
+
+                    case NUM: {
                         print_line_to_std_err();
-                        std::cerr << "Error: expected function name\n";
+                        std::cerr << "Error: function names can't begin with numbers" << newl;
                         return 1;
                     }
-                    
-                    case AL: { // scan the name
-                        // Disallow characters after trailing spaces
-                        if (trailing_spaces_only) {
-                            print_line_to_std_err();
-                            std::cerr << "Error: expected only one identifier\n";
-                            return 1;
+
+                    case AL: {
+                        buffer0.push_back(ch);
+                        state = SCAN_FUNC_NAME;
+                        break;
+                    }
+
+                    case SLASH: {
+                        if (get_next_char_category() == AST) {
+                            state_before_block_comment = state;
+                            state = COMMENT_SCAN_BEGIN;
+                            break;
                         }
 
+                        print_line_to_std_err();
+                        std::cerr << "Error: missing function name" << newl;
+                        return 1;
+                    }
+
+                    default: {
+                        print_line_to_std_err();
+                        std::cerr << "Error: invalid character: " << ch << newl;
+                        return 1;
+                    }
+                }
+                break;
+            }
+
+
+
+            case SCAN_FUNC_NAME: {
+                switch (category) {
+                    case AL:
+                    case NUM: {
                         buffer0.push_back(ch);
                         break;
                     }
 
-                    case NUM: { // if not the first character, valid character
-                        if (buffer0.size() > 0) {
-                            // Disallow characters after trailing spaces
-                            if (trailing_spaces_only) {
+                    case SLASH:
+                    case COLON:
+                    case SP: {
+                        if (category == SLASH) {
+                            if (get_next_char_category() == AST) {
+                                state_before_block_comment = state;
+                                state = COMMENT_SCAN_BEGIN;
+                                break;
+                            } else {
                                 print_line_to_std_err();
-                                std::cerr << "Error: expected only one identifier\n";
+                                std::cerr << "Error: expected colon" << newl;
                                 return 1;
                             }
-
-                            buffer0.push_back(ch);
-                        } else {
-                            print_line_to_std_err();
-                            std::cerr << "Error: identifiers can't begin with numbers\n";
-                            return 1;
                         }
-                        break;
-                    }
 
-                    case COLON: {
                         std::string buffer_str(buffer0.begin(), buffer0.end());
                         functions.insert({buffer_str, pc});
 
                         buffer0.clear();
-                        trailing_spaces_only = false;
-                        state = SCAN_FIRST;
+
+                        if (category == COLON) {
+                            state = NOTHING_OR_COMMENT_UNTIL_LF;
+                        } else {
+                            state = SCAN_FUNC_TRAIL;
+                        }
 
                         if (DEBUG_LEVEL >= 1) {
                             std::cout << "# Function Definition Complete #\n";
@@ -449,19 +624,43 @@ int Yuasm::mainloop() {
                         break;
                     }
 
-                    // Spaces before and after the function name are allowed
+                    default: {
+                        print_line_to_std_err();
+                        std::cerr << "Error: invalid character in function name: " << ch << newl;
+                        return 1;
+                    }
+                }
+                break;
+            }
+
+
+
+            case SCAN_FUNC_TRAIL: {
+                switch (category) {
                     case SP: {
-                        if (buffer0.size() == 0) {
-                            // Ignore leading spaces
+                        break; // allow trailing spaces
+                    }
+
+                    case COLON: {
+                        state = NOTHING_OR_COMMENT_UNTIL_LF;
+                        break;
+                    }
+
+                    case SLASH: {
+                        if (get_next_char_category() == AST) {
+                            state_before_block_comment = state;
+                            state = COMMENT_SCAN_BEGIN;
                             break;
                         }
-                        trailing_spaces_only = true;
-                        break;
+
+                        print_line_to_std_err();
+                        std::cerr << "Error: missing colon" << newl;
+                        return 1;
                     }
 
                     default: {
                         print_line_to_std_err();
-                        std::cerr << "Error: invalid character for function name: " << ch << newl;
+                        std::cerr << "Error: invalid character: " << ch << newl;
                         return 1;
                     }
                 }
@@ -474,7 +673,16 @@ int Yuasm::mainloop() {
                 switch (category) {
                     case SC:
                     case LF:
+                    case SLASH:
                     case CR: { // these are invalid, we expect a parameter
+                        if (category == SLASH) {
+                            if (get_next_char_category() == AST) { // means it's going to be a block comment
+                                state_before_block_comment = state;
+                                state = COMMENT_SCAN_BEGIN;
+                                break;
+                            }
+                        }
+
                         std::string instr(buffer0.begin(), buffer0.end());
                         if (eval_instr(instr, params) != 0) {
                             return 1;
@@ -482,7 +690,17 @@ int Yuasm::mainloop() {
 
                         buffer0.clear();
                         pc += 4;
-                        state = SCAN_FIRST;
+
+                        if (category == LF) {
+                            state = SCAN_FIRST;
+                        } else if (category == SC) {
+                            state = NOTHING_OR_COMMENT_UNTIL_LF;
+                        } else if (category == SLASH) {
+                            state = COMMENT_SCAN_BEGIN; // it's going to be a line comment so no need to save the state
+                        } else {
+                            state = SC_OR_COMMENT_UNTIL_LF;
+                        }
+                        
                         break;
                     }
                     
@@ -505,10 +723,10 @@ int Yuasm::mainloop() {
                     case SP: {
                         // First check if it's a macro expansion
                         expand_macro(&buffer0, macros);
-
+                        
                         std::string buffer_str(buffer0.begin(), buffer0.end());
                         if (get_no_of_params_for_instr(buffer_str) >= 0) { // means instruction is valid
-                            state = SCAN_PARAMS;
+                            state = SCAN_PARAM_NO_COMMA_YES_DASH;
                         } else {
                             print_line_to_std_err();
                             std::cerr << "Error: invalid instruction (1): " << buffer_str << newl;
@@ -548,7 +766,7 @@ int Yuasm::mainloop() {
                         }
 
                         buffer0.clear();
-                        state = SCAN_FIRST;
+                        state = SC_OR_COMMENT_UNTIL_LF;
                         break;
                     }
 
@@ -564,189 +782,168 @@ int Yuasm::mainloop() {
 
 
 
-            // TODO check for trailing spaces after the last parameter
-            case SCAN_PARAMS: {
+            case SCAN_PARAM_NO_COMMA_NO_DASH:
+            case SCAN_PARAM_NO_COMMA_YES_DASH:
+            case SCAN_PARAM_YES_COMMA_YES_DASH: {
                 switch (category) {
-                    case INPUT_EOF:
-                    case LF:
-                    case CR:
-                    case SC: {
-                        // Trailing commas after the last parameter are not allowed
-                        if (used_comma) {
-                            print_line_to_std_err();
-                            std::cerr << "Error: trailing commas are not allowed\n";
-                            return 1;
+                    case NUM:
+                    case AL: {
+                        buffer1.push_back(ch);
+                        break;
+                    }
+
+                    case SP: {
+                        if (buffer1.size() == 0) {
+                            break; // allow leading spaces
                         }
 
-                        // Need to check if another parameter needs to be added
-                        if (buffer1.size() > 0) {
-                            int offset = 0; // to avoid reading the last letter in the file twice
-                            if (category == INPUT_EOF) {
-                                offset = -1;
-                            }
-
-                            expand_macro(&buffer1, macros); // Check if it's a macro expansion
-                            std::string param(buffer1.begin(), buffer1.end() + offset);
-                            if (used_dash) {
-                                param = "-" + param;
-                                used_dash = false;
-                            }
-                            params.push_back(param);
-                            buffer1.clear();
-
-                            if (DEBUG_LEVEL >= 2) {
-                                std::cout << "Added parameter: " << param << newl; // DEBUG
+                        expand_macro(&buffer1, macros);
+                        if (state == SCAN_PARAM_NO_COMMA_NO_DASH) {
+                            if (buffer1.at(0) == '-') { // if there's a negative sign in the macro and a negative sign before it, cancel out the negatives
+                                buffer1.erase(buffer1.begin());
+                            } else {
+                                buffer1.insert(buffer1.begin(), '-');
                             }
                         }
-
-                        std::string instr(buffer0.begin(), buffer0.end());
-                        if (eval_instr(instr, params) != 0) {
-                            return 1;
-                        }
-
-                        buffer0.clear();
+                        std::string param(buffer1.begin(), buffer1.end());
+                        params.push_back(param);
                         buffer1.clear();
-                        params.clear();
-                        used_comma = false;
-                        pc += 4;
-                        state = SCAN_FIRST;
+                        state = SCAN_PARAM_YES_COMMA_YES_DASH;
 
                         if (DEBUG_LEVEL >= 2) {
-                            if (category == INPUT_EOF) {
-                                std::cout << "Category EOF\n"; // DEBUG
-                            }
+                            std::cout << "Saved parameter: " << param << " at SCAN_PARAM_X case SP" << newl;
                         }
-
                         break;
                     }
 
-                    case DASH: {
-                        if (used_dash) {
-                            print_line_to_std_err();
-                            std::cerr << "Error: double negation is not allowed\n";
-                            return 1;
-                        }
-                        used_dash = true;
-                        break;
-                    }
-
-                    case AL:
-                    case NUM: {
-                        buffer1.push_back(ch);
-                        used_comma = false;
-                        break;
-                    }
-
-                    case SP: { // end of current parameter or leading space
-                        // Allow leading spaces
-                        if (category == SP) {
-                            if (buffer1.size () == 0) {
-                                // Ignore leading spaces
+                    case LF:
+                    case SLASH:
+                    case SC: {
+                        if (category == SLASH) { // if it's a block comment we might want to not reset things
+                            if (get_next_char_category() == AST) { // means it's going to be a block comment
+                                state_before_block_comment = state;
+                                state = COMMENT_SCAN_BEGIN;
                                 break;
                             }
                         }
 
-                        // Check if it's a macro expansion
-                        expand_macro(&buffer1, macros);
-
-                        std::string param(buffer1.begin(), buffer1.end());
-                        if (used_dash) {
-                            param = "-" + param;
-                            used_dash = false;
-                        }
-                        params.push_back(param);
-                        buffer1.clear();
-
-                        if (DEBUG_LEVEL >= 2) {
-                            std::cout << "Added param: " << param << newl; // DEBUG
-                        }
-                        break;
-                    }
-
-                    // Only one comma between parameters is allowed
-                    // No comma before the first parameter is allowed
-                    case COMMA: {
-                        // Disallow comma after negative sign
-                        if (used_dash) {
-                            print_line_to_std_err();
-                            std::cerr << "Error: comma after negative sign is not allowed\n";
-                            return 1;
-                        }
-
-                        // If the comma is connected to the end of the parameter
                         if (buffer1.size() > 0) {
-                            // Check if it's a macro expansion
                             expand_macro(&buffer1, macros);
-
-                            std::string param(buffer1.begin(), buffer1.end());
-                            if (used_dash) {
-                                param = "-" + param;
-                                used_dash = false;
+                            if (state == SCAN_PARAM_NO_COMMA_NO_DASH) {
+                                if (buffer1.at(0) == '-') { // if there's a negative sign in the macro and a negative sign before it, cancel out the negatives
+                                    buffer1.erase(buffer1.begin());
+                                } else {
+                                    buffer1.insert(buffer1.begin(), '-');
+                                }
                             }
+                            std::string param(buffer1.begin(), buffer1.end());
                             params.push_back(param);
-                            used_comma = true;
-                            buffer1.clear();
 
                             if (DEBUG_LEVEL >= 2) {
-                                std::cout << "Added param: " << param << newl; // DEBUG
+                                std::cout << "Saved parameter: " << param << " at SCAN_PARAM_X case LF SLASH SC" << newl;
                             }
-                            break;
-                        }
-
-                        // Disallow multiple commas
-                        if (used_comma) {
-                            print_line_to_std_err();
-                            std::cerr << "Error: invalid parameter (only one comma between parameters is allowed)\n";
-                            return 1;
-                        }
-                        used_comma = true;
-
-                        // Disallow comma before first parameter
-                        if (params.size() == 0) {
-                            print_line_to_std_err();
-                            std::cerr << "Error: comma before the first parameter is not allowed\n";
-                            return 1;
-                        }
-
-                        if (DEBUG_LEVEL >= 2) {
-                            std::cout << "Used comma\n";
-                        }
-
-                        break;
-                    }
-
-                    // Terminate scanning and switch to line comments
-                    case SLASH: {
-                        // Check if another parameter needs to be added
-                        if (buffer1.size() > 0) {
-                            expand_macro(&buffer1, macros); // Check if it's a macro expansion
-                            std::string param(buffer1.begin(), buffer1.end());
-                            if (used_dash) {
-                                param = "-" + param;
-                                used_dash = false;
-                            }
-                            params.push_back(param);
-                            used_comma = true; // TODO check why I put this here
-                            buffer1.clear();
-
-                            if (DEBUG_LEVEL >= 2) {
-                                std::cout << "Added param: " << param << newl; // DEBUG
+                        } else {
+                            if (state == SCAN_PARAM_NO_COMMA_YES_DASH || state == SCAN_PARAM_NO_COMMA_NO_DASH) {
+                                // check against trailing comma
+                                // state can be NO_COMMA in two scenarios:
+                                // *after the instruction and before the first parameter 
+                                // *when a comma is already used between parameters
+                                // we can make sure it's not sure first case by checking if there are any parameters
+                                // if it's a no parameter instruction we don't want to throw an error
+                                if (DEBUG_LEVEL >= 2) {
+                                    std::cout << "params.size(): " << params.size() << ", buffer1.size(): " << buffer1.size() << newl;
+                                }
+                                if (params.size() > 0 && buffer1.empty()) { // buffer1.empty() is guaranteed but still
+                                    print_line_to_std_err();
+                                    std::cerr << "Error: comma not allowed here" << newl;
+                                    return 1;
+                                }
                             }
                         }
 
-                        // Moving on
                         std::string instr(buffer0.begin(), buffer0.end());
                         if (eval_instr(instr, params) != 0) {
                             return 1;
                         }
 
-                        buffer0.clear();
                         buffer1.clear();
+                        buffer0.clear();
                         params.clear();
-                        used_comma = false;
                         pc += 4;
-                        state = COMMENT_SCAN_BEGIN;
-                        state_before_block_comment = SCAN_FIRST; // TODO maybe implement a way to put block comments between parameters
+
+                        if (category == SLASH) {
+                            state_before_block_comment = state;
+                            state = COMMENT_SCAN_BEGIN;
+                        } else if (category == LF) {
+                            state = SCAN_FIRST;
+                        } else if (category == SC) {
+                            state = NOTHING_OR_COMMENT_UNTIL_LF;
+                        } else {
+                            print_line_to_std_err();
+                            std::cerr << "Error: Invalid char: " << ch << newl;
+                            return 1;
+                        }
+                        break;
+                    }
+
+                    case DASH: {
+                        if (state == SCAN_PARAM_YES_COMMA_YES_DASH || state == SCAN_PARAM_NO_COMMA_YES_DASH) {
+                            if (buffer1.size() == 0) {
+                                state = SCAN_PARAM_NO_COMMA_NO_DASH;
+                            } else {
+                                print_line_to_std_err();
+                                std::cerr << "Error: can't have negative sign in the middle of an identifier" << newl;
+                                return 1;
+                            }
+                        } else if (state == SCAN_PARAM_NO_COMMA_NO_DASH) {
+                            print_line_to_std_err();
+                            std::cerr << "Error: double negation is not allowed" << newl;
+                            return 1;
+                        }
+                        break;
+                    }
+
+                    case COMMA: {
+                        if (state == SCAN_PARAM_YES_COMMA_YES_DASH) {
+                            // two possible paths for comma
+                            // if buffer1 is empty, it means we will continue scanning but no longer allow another comma
+                            // if buffer1 has contents, it means parameter scanning is completed
+                            if (buffer1.empty()) {
+                                state = SCAN_PARAM_NO_COMMA_YES_DASH;
+                            } else {
+                                expand_macro(&buffer1, macros);
+                                std::string param(buffer1.begin(), buffer1.end());
+                                params.push_back(param);
+                                state = SCAN_PARAM_NO_COMMA_YES_DASH;
+                                buffer1.clear();
+
+                                if (DEBUG_LEVEL >= 2) {
+                                    std::cout << "Saved parameter: " << param << " at SCAN_PARAM_YES_COMMA_YES_DASH" << newl;
+                                }
+                            }
+                        } else if (state == SCAN_PARAM_NO_COMMA_NO_DASH || state == SCAN_PARAM_NO_COMMA_YES_DASH) {
+                            if (buffer1.empty()) {
+                                print_line_to_std_err();
+                                std::cerr << "Error: comma not allowed here" << newl;
+                                return 1;
+                            } else {
+                                // being here means the comma is used to terminate a parameter which is ok
+                                expand_macro(&buffer1, macros);
+                                std::string param(buffer1.begin(), buffer1.end());
+                                params.push_back(param);
+                                state = SCAN_PARAM_YES_COMMA_YES_DASH;
+                                buffer1.clear();
+
+                                if (DEBUG_LEVEL >= 2) {
+                            std::cout << "Saved parameter: " << param << " at SCAN_PARAM_NO_COMMA_X" << newl;
+                        }
+                            }
+                        }
+                        break;
+                    }
+
+                    case CR: {
+                        // TODO ignore for now
                         break;
                     }
 
@@ -999,17 +1196,6 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         std::string val_str = params[0];
         if (!is_numeric(val_str[0])) {
             // It's a function name
-            /*
-            int func_index = get_function_index(val_str);
-            if (func_index < 0) {
-                std::cerr << "Error: invalid function name\n";
-                return 1;
-            } else {
-                int diff = func_index - pc;
-                val = diff & 0xFFFF;
-            }
-            */
-
             callers.insert({val_str, pc});
             val = 0;
         } else {
@@ -1041,17 +1227,6 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         std::string val_str = params[0];
         if (!is_numeric(val_str[0])) {
             // It's a function name
-            /*
-            int func_index = get_function_index(val_str);
-            if (func_index < 0) {
-                std::cerr << "Error: invalid function name\n";
-                return 1;
-            } else {
-                int diff = func_index - pc;
-                val = diff & 0xFFFF;
-            }
-            */
-
             callers.insert({val_str, pc});
             val = 0;
         } else {
@@ -1104,17 +1279,6 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         std::string val_str = params[0];
         if (!is_numeric(val_str[0])) {
             // It's a function name
-            /*
-            int func_index = get_function_index(val_str);
-            if (func_index < 0) {
-                std::cerr << "Error: invalid function name\n";
-                return 1;
-            } else {
-                int diff = func_index - pc;
-                val = diff & 0xFFFF;
-            }
-            */
-
             callers.insert({val_str, pc});
             val = 0;
         } else {
@@ -1135,16 +1299,6 @@ int Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         std::string val_str = params[0];
         if (!is_numeric(val_str[0])) {
             // It's a function name
-            /*
-            int func_index = get_function_index(val_str);
-            if (func_index < 0) {
-                std::cerr << "Error: invalid function name\n";
-                return 1;
-            } else {
-                int diff = func_index - pc;
-                val = diff & 0xFFFF;
-            }
-            */
 
             callers.insert({val_str, pc});
             val = 0;
@@ -1489,11 +1643,9 @@ std::string Yuasm::print_state() {
     switch (state) {
         case SCAN_FIRST: return "SCAN_FIRST";
         case SCAN_INSTR_OR_MACRO: return "SCAN_INSTR_OR_MACRO";
-        case SCAN_PARAMS: return "SCAN_PARAMS";
         case SCAN_PREPROC_DEF: return "SCAN_PREPROC_DEF";
         case SCAN_PREPROC_SUB: return "SCAN_PREPROC_SUB";
         case SCAN_INCLUDE_FPATH: return "SCAN_INCLUDE_FPATH";
-        case SCAN_FUNC_HEAD: return "SCAN_FUNC_HEAD";
         case SCAN_PREPROC_VAL: return "SCAN_PREPROC_VAL";
         case WAIT_PAREN_CLOSE: return "WAIT_PAREN_CLOSE";
         case COMMENT_SCAN_BEGIN: return "COMMENT_SCAN_BEGIN";
@@ -1501,6 +1653,16 @@ std::string Yuasm::print_state() {
         case BLOCK_COMMENT: return "BLOCK_COMMENT";
         case LINE_COMMENT_END: return "LINE_COMMENT_END";
         case BLOCK_COMMENT_END: return "BLOCK_COMMENT_END";
+        case SC_OR_COMMENT_UNTIL_LF: return "SC_OR_COMMENT_UNTIL_LF";
+        case NOTHING_OR_COMMENT_UNTIL_LF: return "NOTHING_OR_COMMENT_UNTIL_LF";
+        case SCAN_PARAM_YES_COMMA_YES_DASH: return "SCAN_PARAM_YES_COMMA_YES_DASH";
+        case SCAN_PARAM_YES_COMMA_NO_DASH: return "SCAN_PARAM_YES_COMMA_NO_DASH";
+        case SCAN_PARAM_NO_COMMA_YES_DASH: return "SCAN_PARAM_NO_COMMA_YES_DASH";
+        case SCAN_PARAM_NO_COMMA_NO_DASH: return "SCAN_PARAM_NO_COMMA_NO_DASH";
+        case SCAN_FUNC_LEAD: return "SCAN_FUNC_LEAD";
+        case SCAN_FUNC_NAME: return "SCAN_FUNC_NAME";
+        case SCAN_FUNC_TRAIL: return "SCAN_FUNC_TRAIL";
+        case SCAN_INCLUDE_LEAD: return "SCAN_INCLUDE_LEAD";
         default: return "UNKNOWN";
     }
 }
@@ -1525,6 +1687,13 @@ void Yuasm::print_line_to_std_err() {
     std::cerr << fnames.top() << " line " << line_counters.top() << ": " << std::string(line_buffer.data(), line_buffer.size()) << newl;
 
     line_buffer.clear(); // in case we want to keep the program running
+}
+
+int Yuasm::get_next_char_category() {
+    char ch;
+    (*(files.top())).get(ch);
+    (*(files.top())).seekg(-1, std::ios::cur); // move the cursor back to avoid causing problems
+    return get_category(ch);
 }
 
 // Static functions
@@ -1557,18 +1726,21 @@ unsigned int Yuasm::param_to_int(std::string param) {
         if (radix == 10) {
             if (!is_numeric(digit_char)) {
                 std::cerr << "Error: invalid decimal number: " << param << newl;
+                std::exit(1);
                 return 0; // TODO handle properly
             }
             digit_value = digit_char - '0';
         } else if (radix == 16) {
             if (!is_hex_digit(digit_char)) {
                 std::cerr << "Error: invalid hexadecimal number: " << param << newl;
+                std::exit(1);
                 return 0; // TODO handle properly
             }
             digit_value = get_hex_value(digit_char);
         } else if (radix == 2) {
             if (digit_char != '0' && digit_char != '1') {
                 std::cerr << "Error: invalid binary number: " << param << newl;
+                std::exit(1);
                 return 0; // TODO handle properly
             }
             digit_value = digit_char - '0';
@@ -1585,8 +1757,6 @@ void Yuasm::expand_macro(std::vector<char>* buffer, std::map<std::string, std::s
     std::string buffer_str(buffer->begin(), buffer->end());
     if (macro_list.find(buffer_str) != macro_list.end()) {
         std::string expansion = macro_list[buffer_str];
-        //std::vector<char> substituted_value_vector(expansion.begin(), expansion.end());
-        //*buffer = substituted_value_vector;
         buffer->assign(expansion.begin(), expansion.end());
     }
 }
@@ -1606,6 +1776,7 @@ const int Yuasm::get_category(char ch) {
         case '(': return PAREN_OPEN;
         case ')': return PAREN_CLOSE;
         case '-': return DASH;
+        case '"': return QUOTE;
         default:
             if (is_alphabetic(ch)) {
                 return AL;

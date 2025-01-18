@@ -1,58 +1,62 @@
-#define n_val 5
+#define /*does this work now*/n_val 6
 #define r_val 3
-
-#define n 0
+   
+#define n /*hello*/ 0
 #define r 1
-#define n_minus_r 2
+#define n_minus_r /*hey*/2
 #define one 3
 #define zero 4
-#define n_fact 5
-#define n_minus_r_fact 6
-#define res 7
-#define r_fact 8
+#define n_fact 5/*hello*/
+#define n_minus_r_fact 6//hello
+#define res 7 // hello
+#define r_fact 8 /* hello */
 #define denom 9
-
+/* hello */
 #define fact_arg 200
 #define fact_cur 201
 #define fact_res 202
 #define fact_cond 203
 
-.main:
-br init
+#include /*what*/ "include/test.yuh" //fdsfdsl
+br imported_function
 
-add fact_arg n zero // to copy registers
+// main function
+./*fdsaf*/ main:
+br init// yooo
+
+add        fact_arg,n zero // to copy registers
 br factorial
-add n_fact fact_res zero
+add/* hello*/ n_fact fact_res zero   ; /* jk hnjklhjkn mnkmn */
 stored 0x100 fact_res // for debug
 
-add fact_arg n_minus_r zero
-br factorial
-add n_minus_r_fact fact_res zero
+add fact_arg n_minus_r ,zero
+br factorial/*hello*/
+add n_minus_r_fact, fact_res , zero
 stored 0x104 fact_res // for debug
 
-add fact_arg r zero
+add /* hello */ fact_arg r zero
 br factorial
-add r_fact fact_res zero
+add r_fact /*asdf*//* hellllllooooooo*/ fact_res /* does this work fds */   zero
 stored 0x108 fact_res // for debug
 
-mul denom r_fact n_minus_r_fact
+mul denom r_fact n_minus_r_fact//hello
 stored 0x10C denom // for debug
 
-div res n_fact denom
-stored 0x110 res
+div /*ffff*/res n_fact denom
+stored/*fdsfdsfds*/ 0x110 res
 
-end
+end;//hello
 
-.init:
+.init /*hey*/:
 loadm n n_val
 loadm r r_val
 loadm n_minus_r 0
 sub n_minus_r n r
 loadm one 1
 loadm zero 0
-ret
+ret ;
 
-.factorial:
+.factorial/*wow*/ :
 loadm fact_res 1
 add fact_cur fact_arg zero
 .fact_loop:
@@ -60,5 +64,5 @@ mul fact_res fact_res fact_cur
 sub fact_cur fact_cur one
 gt fact_cond fact_cur one
 jumpif fact_loop fact_cond
-ret
+ret // hello
 

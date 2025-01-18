@@ -15,18 +15,26 @@ class Yuasm {
         enum State {
             SCAN_FIRST,
             SCAN_INSTR_OR_MACRO,
-            SCAN_PARAMS,
             SCAN_PREPROC_DEF,
             SCAN_PREPROC_SUB,
+            SCAN_INCLUDE_LEAD,
             SCAN_INCLUDE_FPATH,
-            SCAN_FUNC_HEAD,
+            SCAN_FUNC_LEAD,
+            SCAN_FUNC_NAME,
+            SCAN_FUNC_TRAIL,
             SCAN_PREPROC_VAL,
             WAIT_PAREN_CLOSE,
             COMMENT_SCAN_BEGIN,
             LINE_COMMENT,
             BLOCK_COMMENT,
             LINE_COMMENT_END,
-            BLOCK_COMMENT_END
+            BLOCK_COMMENT_END,
+            SC_OR_COMMENT_UNTIL_LF,
+            NOTHING_OR_COMMENT_UNTIL_LF,
+            SCAN_PARAM_YES_COMMA_YES_DASH,
+            SCAN_PARAM_YES_COMMA_NO_DASH,
+            SCAN_PARAM_NO_COMMA_YES_DASH,
+            SCAN_PARAM_NO_COMMA_NO_DASH
         };
 
         enum Input {
@@ -46,7 +54,8 @@ class Yuasm {
             INPUT_EOF,
             PAREN_OPEN,
             PAREN_CLOSE,
-            DASH
+            DASH,
+            QUOTE
         };
 
         int state = SCAN_FIRST;
@@ -67,9 +76,6 @@ class Yuasm {
         int pc = 0; // program counter
 
         int state_before_block_comment; // TODO not properly implemented
-        bool trailing_spaces_only = false;
-        bool used_comma = false;
-        bool used_dash = false; // to detect negative numbers
 
         int open_new_file(std::string fname);
         int mainloop();
@@ -79,6 +85,7 @@ class Yuasm {
         int write_object();
         int link_object();
         void print_line_to_std_err();
+        int get_next_char_category();
 
         static void expand_macro(std::vector<char>* buffer, std::map<std::string, std::string> macro_list);
         static const int get_category(char ch);
@@ -87,6 +94,7 @@ class Yuasm {
         static int get_no_of_params_for_instr(std::string instr); // returns -1 if instruction is invalid
         static unsigned int param_to_int(std::string param);
         static bool is_hex_digit(char c);
+        static bool is_binary_digit(char c);
         static unsigned int get_hex_value(char c);
         static std::string get_instr_as_hex(unsigned int instr_int);
         static unsigned int twos_complement(unsigned int val);

@@ -46,10 +46,10 @@ int Linker::save_defs_and_callers_and_instrs() {
         file.get(N_defs_char[1]);
         file.get(N_defs_char[0]);
 
-        N_defs += N_defs_char[0];
-        N_defs += N_defs_char[1] << 8;
-        N_defs += N_defs_char[2] << 16;
-        N_defs += N_defs_char[3] << 24;
+        N_defs += ((unsigned char) N_defs_char[0]);
+        N_defs += ((unsigned char) N_defs_char[1]) << 8;
+        N_defs += ((unsigned char) N_defs_char[2]) << 16;
+        N_defs += ((unsigned char) N_defs_char[3]) << 24;
 
         if (DEBUG_LEVEL >= 12) {
             std::cout << "N_defs for " << fpath << ": " << N_defs << "\n";
@@ -65,8 +65,8 @@ int Linker::save_defs_and_callers_and_instrs() {
             file.get(len_char[1]);
             file.get(len_char[0]);
 
-            len += len_char[0];
-            len += len_char[1] << 8;
+            len += ((unsigned char) len_char[0]);
+            len += ((unsigned char) len_char[1]) << 8;
 
             if (DEBUG_LEVEL >= 12) {
                 std::cout << "* len for " << fpath << " symbol no " << defi << ": " << len << "\n";
@@ -78,8 +78,12 @@ int Linker::save_defs_and_callers_and_instrs() {
                 char cur_char = '0';
                 file.get(cur_char);
                 symbol_name_chars.push_back(cur_char);
+
+                if (DEBUG_LEVEL >= 12) {
+                    std::cout << "symbol current char: " << cur_char  << "(" << (int) cur_char << ")" << "\n";
+                }
             }
-            std::string symbol_name(symbol_name_chars.data());
+            std::string symbol_name(symbol_name_chars.data(), symbol_name_chars.size());
 
             if (DEBUG_LEVEL >= 12) {
                 std::cout << "+ symbol name: " << symbol_name << "\n";
@@ -94,10 +98,10 @@ int Linker::save_defs_and_callers_and_instrs() {
             file.get(loc_char[1]);
             file.get(loc_char[0]);
 
-            loc += loc_char[0];
-            loc += loc_char[1] << 8;
-            loc += loc_char[2] << 16;
-            loc += loc_char[3] << 24;
+            loc += ((unsigned char) loc_char[0]);
+            loc += ((unsigned char) loc_char[1]) << 8;
+            loc += ((unsigned char) loc_char[2]) << 16;
+            loc += ((unsigned char) loc_char[3]) << 24;
 
             if (DEBUG_LEVEL >= 12) {
                 std::cout << "+ symbol address: " << loc << "\n";
@@ -117,10 +121,10 @@ int Linker::save_defs_and_callers_and_instrs() {
         file.get(N_callers_char[1]);
         file.get(N_callers_char[0]);
 
-        N_callers += N_callers_char[0];
-        N_callers += N_callers_char[1] << 8;
-        N_callers += N_callers_char[2] << 16;
-        N_callers += N_callers_char[3] << 24;
+        N_callers += ((unsigned char) N_callers_char[0]);
+        N_callers += ((unsigned char) N_callers_char[1]) << 8;
+        N_callers += ((unsigned char) N_callers_char[2]) << 16;
+        N_callers += ((unsigned char) N_callers_char[3]) << 24;
 
         if (DEBUG_LEVEL >= 12) {
             std::cout << "N_callers for " << fpath << ": " << N_callers << "\n";
@@ -135,8 +139,8 @@ int Linker::save_defs_and_callers_and_instrs() {
             file.get(len_char[1]);
             file.get(len_char[0]);
 
-            len += len_char[0];
-            len += len_char[1] << 8;
+            len += ((unsigned char) len_char[0]);
+            len += ((unsigned char) len_char[1]) << 8;
 
             if (DEBUG_LEVEL >= 12) {
                 std::cout << "* len for " << fpath << " symbol no " << calleri << ": " << len << "\n";
@@ -149,8 +153,12 @@ int Linker::save_defs_and_callers_and_instrs() {
                 char cur_char = '0';
                 file.get(cur_char);
                 symbol_name_chars.push_back(cur_char);
+
+                if (DEBUG_LEVEL >= 12) {
+                    std::cout << "symbol current char: " << cur_char  << "(" << (int) cur_char << ")" << "\n";
+                }
             }
-            std::string symbol_name(symbol_name_chars.data());
+            std::string symbol_name(symbol_name_chars.data(), symbol_name_chars.size());
 
             if (DEBUG_LEVEL >= 12) {
                 std::cout << "+ symbol name: " << symbol_name << "\n";
@@ -165,10 +173,10 @@ int Linker::save_defs_and_callers_and_instrs() {
             file.get(loc_char[1]);
             file.get(loc_char[0]);
 
-            loc += loc_char[0];
-            loc += loc_char[1] << 8;
-            loc += loc_char[2] << 16;
-            loc += loc_char[3] << 24;
+            loc += ((unsigned char) loc_char[0]);
+            loc += ((unsigned char) loc_char[1]) << 8;
+            loc += ((unsigned char) loc_char[2]) << 16;
+            loc += ((unsigned char) loc_char[3]) << 24;
 
             if (DEBUG_LEVEL >= 12) {
                 std::cout << "+ caller address: " << loc << "\n";
@@ -239,7 +247,7 @@ int Linker::place_symbols() {
 
             int def_abs_loc = find_symbol(symbol_name);
             if (def_abs_loc < 0) {
-                std::cerr << "Error: symbol not found\n";
+                std::cerr << "Error: symbol not found: " << symbol_name << "\n";
                 return 1;
             }
             

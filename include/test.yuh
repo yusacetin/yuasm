@@ -1,0 +1,4 @@
+.imported_function:
+loadm 220 8
+stored 0x200 220
+ret
