@@ -278,18 +278,31 @@ int Yuasm::mainloop() {
                     }
 
                     // We can't have spaces before the keyword, it has to be connected to the '#'
-                    case SLASH:
                     case SP: {
-                        if (category == SLASH) {
-                            if (get_next_char_category() == AST) {
-                                state_before_block_comment = state;
-                                state = COMMENT_SCAN_BEGIN;
-                                break;
-                            } else {
-                                print_line_to_std_err();
-                                std::cerr << "Error: expected parameters for preprocessor directive" << newl;
-                                return 1;
-                            }
+                        std::string buffer_str(buffer0.begin(), buffer0.end());
+                        if (buffer_str == "define") {
+                            state = SCAN_PREPROC_SUB;
+                            buffer0.clear();
+                        } else if (buffer_str == "include") {
+                            state = SCAN_INCLUDE_LEAD;
+                            buffer0.clear();
+                        } else {
+                            print_line_to_std_err();
+                            std::cerr << "Error: invalid preprocessor directive: " << buffer_str << newl;
+                            return 1;
+                        }
+                        break;
+                    }
+
+                    case SLASH: {
+                        if (get_next_char_category() == AST) {
+                            state_before_block_comment = state;
+                            state = COMMENT_SCAN_BEGIN;
+                            break;
+                        } else {
+                            print_line_to_std_err();
+                            std::cerr << "Error: expected parameters for preprocessor directive" << newl;
+                            return 1;
                         }
 
                         std::string buffer_str(buffer0.begin(), buffer0.end());
@@ -397,25 +410,13 @@ int Yuasm::mainloop() {
                         break;
                     }
 
-                    case SLASH:
-                    case LF:
-                    case CR:
+
                     case SP: {
-                        if (category == SLASH) {
-                            if (get_next_char_category() == AST) {
-                                state_before_block_comment = state;
-                                state = COMMENT_SCAN_BEGIN;
-                                break;
-                            }
-                        }
-                        
-                        if (category == SP) {
-                            // There can be as many spaces as desired before the parameter begins
-                            // But after the parameter ends we switch to the next state
-                            if (buffer1.size() == 0) {
-                                // Ignore leading spaces
-                                break;
-                            }
+                        // There can be as many spaces as desired before the parameter begins
+                        // But after the parameter ends we switch to the next state
+                        if (buffer1.size() == 0) {
+                            // Ignore leading spaces
+                            break;
                         }
 
                         std::string macro_name(buffer0.begin(), buffer0.end());
@@ -432,6 +433,51 @@ int Yuasm::mainloop() {
                         } else {
                             state = SC_OR_COMMENT_UNTIL_LF;
                         }
+
+                        if (DEBUG_LEVEL >= 1) {
+                            std::cout << "# Macro Definition Complete #\n"; // DEBUG
+                            std::cout << "Key: " << macro_name << ", Value: " << macro_val << "\n\n";
+                        }
+                        break;
+                    }
+
+                    case LF:
+                    case CR: {
+                        std::string macro_name(buffer0.begin(), buffer0.end());
+                        std::string macro_val(buffer1.begin(), buffer1.end());
+                        macros.insert({macro_name, macro_val});
+
+                        buffer0.clear();
+                        buffer1.clear();
+
+                        if (category == LF) {
+                            state = SCAN_FIRST;
+                        } else {
+                            state = SC_OR_COMMENT_UNTIL_LF;
+                        }
+
+                        if (DEBUG_LEVEL >= 1) {
+                            std::cout << "# Macro Definition Complete #\n"; // DEBUG
+                            std::cout << "Key: " << macro_name << ", Value: " << macro_val << "\n\n";
+                        }
+                        break;
+                    }
+
+                    case SLASH: {
+                        if (get_next_char_category() == AST) {
+                            state_before_block_comment = state;
+                            state = COMMENT_SCAN_BEGIN;
+                            break;
+                        }
+
+                        std::string macro_name(buffer0.begin(), buffer0.end());
+                        std::string macro_val(buffer1.begin(), buffer1.end());
+                        macros.insert({macro_name, macro_val});
+
+                        buffer0.clear();
+                        buffer1.clear();
+
+                        state = COMMENT_SCAN_BEGIN; // guaranteed to be line comment
 
                         if (DEBUG_LEVEL >= 1) {
                             std::cout << "# Macro Definition Complete #\n"; // DEBUG
@@ -590,19 +636,36 @@ int Yuasm::mainloop() {
                         break;
                     }
 
-                    case SLASH:
                     case COLON:
                     case SP: {
-                        if (category == SLASH) {
-                            if (get_next_char_category() == AST) {
-                                state_before_block_comment = state;
-                                state = COMMENT_SCAN_BEGIN;
-                                break;
-                            } else {
-                                print_line_to_std_err();
-                                std::cerr << "Error: expected colon" << newl;
-                                return 1;
-                            }
+                        std::string buffer_str(buffer0.begin(), buffer0.end());
+                        functions.insert({buffer_str, pc});
+
+                        buffer0.clear();
+
+                        if (category == COLON) {
+                            state = NOTHING_OR_COMMENT_UNTIL_LF;
+                        } else {
+                            state = SCAN_FUNC_TRAIL;
+                        }
+
+                        if (DEBUG_LEVEL >= 1) {
+                            std::cout << "# Function Definition Complete #\n";
+                            std::cout << "Function name: " << buffer_str << newl;
+                            std::cout << "Function address: " << pc << "\n\n";
+                        }
+                        break;
+                    }
+
+                    case SLASH: {
+                        if (get_next_char_category() == AST) {
+                            state_before_block_comment = state;
+                            state = COMMENT_SCAN_BEGIN;
+                            break;
+                        } else {
+                            print_line_to_std_err();
+                            std::cerr << "Error: expected colon" << newl;
+                            return 1;
                         }
 
                         std::string buffer_str(buffer0.begin(), buffer0.end());
@@ -673,16 +736,7 @@ int Yuasm::mainloop() {
                 switch (category) {
                     case SC:
                     case LF:
-                    case SLASH:
                     case CR: { // these are invalid, we expect a parameter
-                        if (category == SLASH) {
-                            if (get_next_char_category() == AST) { // means it's going to be a block comment
-                                state_before_block_comment = state;
-                                state = COMMENT_SCAN_BEGIN;
-                                break;
-                            }
-                        }
-
                         std::string instr(buffer0.begin(), buffer0.end());
                         if (eval_instr(instr, params) != 0) {
                             return 1;
@@ -695,11 +749,29 @@ int Yuasm::mainloop() {
                             state = SCAN_FIRST;
                         } else if (category == SC) {
                             state = NOTHING_OR_COMMENT_UNTIL_LF;
-                        } else if (category == SLASH) {
-                            state = COMMENT_SCAN_BEGIN; // it's going to be a line comment so no need to save the state
                         } else {
                             state = SC_OR_COMMENT_UNTIL_LF;
                         }
+                        
+                        break;
+                    }
+
+                    case SLASH: { // this is also invalid, we expect a parameter
+                        if (get_next_char_category() == AST) { // means it's going to be a block comment
+                            state_before_block_comment = state;
+                            state = COMMENT_SCAN_BEGIN;
+                            break;
+                        }
+
+                        std::string instr(buffer0.begin(), buffer0.end());
+                        if (eval_instr(instr, params) != 0) {
+                            return 1;
+                        }
+
+                        buffer0.clear();
+                        pc += 4;
+
+                        state = COMMENT_SCAN_BEGIN; // it's going to be a line comment so no need to save the state
                         
                         break;
                     }
@@ -817,14 +889,68 @@ int Yuasm::mainloop() {
                     }
 
                     case LF:
-                    case SLASH:
                     case SC: {
-                        if (category == SLASH) { // if it's a block comment we might want to not reset things
-                            if (get_next_char_category() == AST) { // means it's going to be a block comment
-                                state_before_block_comment = state;
-                                state = COMMENT_SCAN_BEGIN;
-                                break;
+                        if (buffer1.size() > 0) {
+                            expand_macro(&buffer1, macros);
+                            if (state == SCAN_PARAM_NO_COMMA_NO_DASH) {
+                                if (buffer1.at(0) == '-') { // if there's a negative sign in the macro and a negative sign before it, cancel out the negatives
+                                    buffer1.erase(buffer1.begin());
+                                } else {
+                                    buffer1.insert(buffer1.begin(), '-');
+                                }
                             }
+                            std::string param(buffer1.begin(), buffer1.end());
+                            params.push_back(param);
+
+                            if (DEBUG_LEVEL >= 2) {
+                                std::cout << "Saved parameter: " << param << " at SCAN_PARAM_X case LF SLASH SC" << newl;
+                            }
+                        } else {
+                            if (state == SCAN_PARAM_NO_COMMA_YES_DASH || state == SCAN_PARAM_NO_COMMA_NO_DASH) {
+                                // check against trailing comma
+                                // state can be NO_COMMA in two scenarios:
+                                // *after the instruction and before the first parameter 
+                                // *when a comma is already used between parameters
+                                // we can make sure it's not sure first case by checking if there are any parameters
+                                // if it's a no parameter instruction we don't want to throw an error
+                                if (DEBUG_LEVEL >= 2) {
+                                    std::cout << "params.size(): " << params.size() << ", buffer1.size(): " << buffer1.size() << newl;
+                                }
+                                if (params.size() > 0 && buffer1.empty()) { // buffer1.empty() is guaranteed but still
+                                    print_line_to_std_err();
+                                    std::cerr << "Error: comma not allowed here" << newl;
+                                    return 1;
+                                }
+                            }
+                        }
+
+                        std::string instr(buffer0.begin(), buffer0.end());
+                        if (eval_instr(instr, params) != 0) {
+                            return 1;
+                        }
+
+                        buffer1.clear();
+                        buffer0.clear();
+                        params.clear();
+                        pc += 4;
+
+                        if (category == LF) {
+                            state = SCAN_FIRST;
+                        } else if (category == SC) {
+                            state = NOTHING_OR_COMMENT_UNTIL_LF;
+                        } else {
+                            print_line_to_std_err();
+                            std::cerr << "Error: Invalid char: " << ch << newl;
+                            return 1;
+                        }
+                        break;
+                    }
+
+                    case SLASH: {
+                        if (get_next_char_category() == AST) { // means it's going to be a block comment
+                            state_before_block_comment = state;
+                            state = COMMENT_SCAN_BEGIN;
+                            break;
                         }
 
                         if (buffer1.size() > 0) {
@@ -871,18 +997,9 @@ int Yuasm::mainloop() {
                         params.clear();
                         pc += 4;
 
-                        if (category == SLASH) {
-                            state_before_block_comment = state;
-                            state = COMMENT_SCAN_BEGIN;
-                        } else if (category == LF) {
-                            state = SCAN_FIRST;
-                        } else if (category == SC) {
-                            state = NOTHING_OR_COMMENT_UNTIL_LF;
-                        } else {
-                            print_line_to_std_err();
-                            std::cerr << "Error: Invalid char: " << ch << newl;
-                            return 1;
-                        }
+                        state_before_block_comment = state; // not necessary since guaranteed to be line comment?
+                        state = COMMENT_SCAN_BEGIN;
+
                         break;
                     }
 
@@ -1627,7 +1744,7 @@ int Yuasm::write_object() {
 int Yuasm::link_object() {
     std::vector<std::string> obj_vec;
     obj_vec.push_back("objects/" + ofname);
-    Linker linker(obj_vec);
+    Linker linker(obj_vec, false);
     return 0;
 }
 

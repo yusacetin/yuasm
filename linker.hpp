@@ -4,10 +4,12 @@
 
 class Linker{
 public:
-    Linker(std::vector<std::string> set_fpaths);
+    Linker(std::vector<std::string> set_fpaths, bool set_standalone_mode);
 
 private:
     const int DEBUG_LEVEL = 10;
+
+    bool standalone_mode;
 
     std::vector<std::string> fpaths;
     std::vector<std::multimap<std::string, int>> defs; // should be map but gotta change the print function

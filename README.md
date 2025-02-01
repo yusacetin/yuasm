@@ -2,94 +2,48 @@
 
 An assembler I'm working on for fun for a fictional ISA. Programs can be run with [Yuemu](https://github.com/yusacetin/yuemu). It's still a work in progress so there are some known issues and testing hasn't been done thoroughly. For example, the last instruction isn't read if there isn't a trailing new line character after it.
 
-## Instructions
+### System Overview
 
-### Legend
+The architecture operates on 256 general purpose registers. Why so many? I wanted to have 32 but I also wanted the program binaries to be easily readable in hexadecimal so I didn't want to split up a hexadecimal digit into different fields. The high number of registers enables registers to be used as variable storages in small programs instead of the memory. Values can be written to and read from registers using all common addressing modes.
 
-* The most significant 4 bits of any instruction denote the instruction category, and the next 4 bits denote the instruction identifier. The most significant byte thus contains the opcode.
+### Syntax
 
-* r[i]: value at register number i
+#### Overview
 
-* m[i]: value at address i
+A line in yuasm code can be one of the following: a line comment or part of a block comment, a preprocessor directive, a function/section definition, or an instruction. Leading and trailing spaces are always (or almost always) allowed between tokens. It is recommended to define an entry section (such as 'main') and use a jump instruction to it at the beginning of programs. The programs won't automatically start running from a particularly named section (such as 'main'). Semicolons are allowed optionally at the end of lines.
 
-* names beginning with r represent registers that contain the related info
+#### Comments
 
-* rd: destination register
-
-* rs: source register
-
-* 'm' at the end of an instruction name stands for iMmediate
-
-* 'd' at the end of an instruction name stands for Direct
-
-* 'r' at the end of an instruction name stands for Register indirect
-
-* 'n' at the end of an instruction name stands for iNdirect
-
-* pc: program counter
-
-### Memory (category 0x0)
+Line comments and block comments are supported. Line comments start with two slashes (`//`) and continue until the end of the current line. Block comments start with `/*` and end with `*/`. Block comments can't be nested, so `/* first block /* second block */ third block */` would be illegal since 'third block' would not be considered part of the comment. Block comments can be placed between tokens.
 
 ```
-loadm rd val: r[rd] = val --> 0000_0000_8-bits-rd_16-bits-val
-loadr rd raddr: r[rd] = m[r[raddr]] --> 0000_0001_8-bits-rd_8-bits-raddr_8-bits-skip
-storen raddr rs: m[r[raddr]] = r[rs] --> 0000_0010_8-bits-raddr_8-bits-rs_8-bits-skip
-stored addr rs:  m[addr] = r[rs] --> 0000_0011_16-bits-addr_8-bits-rs
-loadd rd addr: r[rd] = m[addr] --> 0000_0100_8-bits-rd_16-bits-addr
+add a b c // adding b to c and saving to a
+mul 1 b /* this is also allowed */ 3
 ```
 
-### Arithmetic (category 0x1)
+#### Preprocessor Directives
+
+There are currently two preprocessor directives: `define` and `include`. Preprocessor directives are used with the prefix `#` which must be attached to the preprocessing tokens. They're both used as the same purpose as in C/C++. File paths after `include` must begin and end with double quote marks (`"`). Macro values defined with `define` can't include spaces or special characters.
 
 ```
-add rd rs1 rs2: r[rd] = r[rs1] + r[rs2] --> 0001_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
-sub rd rs1 rs2: r[rd] = r[rs1] - r[rs2] --> 0001_0001_8-bits-rd_8-bits-rs1_8-bits-rs2
-mul rd rs1 rs2: r[rd] = r[rs1] * r[rs2] --> 0001_0010_8-bits-rd_8-bits-rs1_8-bits-rs2
-div rd rs1 rs2: r[rd] = r[rs1] / r[rs2] --> 0001_0011_8-bits-rd_8-bits-rs1_8-bits-rs2
+#define macro_name 123 // any occurrence of the word 'macro_name' will be replaced by '123'
+#include "../libraries/my_file.yuh" // .yuh is the 'official' header extension for yuasm
 ```
 
-### Control (category 0x2)
+#### Functions/Sections
 
-Note: "val" in jump, jumpif, br, and brif should only be function/section names. Avoid using actual numbers.
-
-```
-jump val: pc += val --> 0010_0000_24-bits-val
-jumpd rs: pc += r[rs] --> 0010_0001_8-bits-rs_skip-16-bits
-
-jumpif val rcond: pc += val if r[rcond] > 0 --> 0010_0010_16-bits-val_8-bits-rcond
-jumpifd rs rcond: pc += r[rs] if r[rcond] > 0 --> 0010_0011_8-bits-rs_8-bits-skip_8-bits-rcond
-
-ret: return to caller --> 0010_00100_24-bits-skip
-end: infinite self loop --> 0010_00101_24-bits-skip
-
-br val: pc += val, push return addr to stack --> 0010_0110_24-bits-val
-brif val rcond: pc += val if r[rcond] > 0, push return addr to stack --> 0010_0111_16-bits-val_8-bits-rcond
-```
-
-### Logical (category 0x3)
+The terms 'function' and 'section' are used interchangably throughout the source code and in any documentation. Sections can be defined using a dot (`.`) followed by the section name followed by a semicolon (and then followed by either comments or a new line). There can be as many spaces as desired between the dot, the section name, and the semicolon.
 
 ```
-and rd rs1 rs2: r[rd] = r[rs1] & r[rs2] --> 0011_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
-or rd rs1 rs2: r[rd] = r[rs1] | r[rs2] --> 0011_0001_8-bits-rd_8-bits-rs1_8-bits-rs2
-
-nand rd rs1 rs2: r[rd] = ~(r[rs1] & r[rs2]) --> 0011_0010_8-bits-rd_8-bits-rs1_8-bits-rs2
-nor rd rs1 rs2: r[rd] = ~(r[rs1] | r[rs2]) --> 0011_0011_8-bits-rd_8-bits-rs1_8-bits-rs2
-
-xor rd rs1 rs2: r[rd] = r[rs1] ^ r[rs2] --> 0011_0100_8-bits-rd_8-bits-rs1_8-bits-rs2
+.main: // OK
+.  main : // OK
+.main   : // OK
 ```
 
-### Shift (category 0x4)
+#### Instructions
 
-```
-lshift rd rs1 rs2: r[rd] = r[rs1] << r[rs2] --> 0001_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
-rshift rd rs1 rs2: r[rd] = r[rs1] >> r[rs2] --> 0001_0001_8-bits-rd_8-bits-rs1_8-bits-rs2
-```
+See `instructions.txt` for a complete list of instructions and their bit maps. Instructions are written as the instruction name followed by any parameters. Number of parameters is fixed for each instruction. See the example in the [Comments](#comments) section.
 
-### Comparison (category 0x5)
+### License
 
-```
-lt rd rs1 rs2: r[rd] = r[rs1] < r[rs2] --> 0001_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
-lte rd rs1 rs2: r[rd] = r[rs1] <= r[rs2] --> 0001_0001_8-bits-rd_8-bits-rs1_8-bits-rs2
-gt rd rs1 rs2: r[rd] = r[rs1] > r[rs2] --> 0001_0010_8-bits-rd_8-bits-rs1_8-bits-rs2
-gte rd rs1 rs2: r[rd] = r[rs1] >= r[rs2] --> 0001_0011_8-bits-rd_8-bits-rs1_8-bits-rs2
-eq rd rs1 rs2: r[rd] = r[rs1] == r[rs2] --> 0001_0100_8-bits-rd_8-bits-rs1_8-bits-rs2
-```
+GNU General Public License version 3 or later.

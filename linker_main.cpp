@@ -14,6 +14,6 @@ int main(int argc, char* argv[]) {
         std::string fpath (argv[i]);
         files.push_back(fpath);
     }
-    Linker linker(files);
+    Linker linker(files, true);
     return 0;
 }

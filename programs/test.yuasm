@@ -1,7 +1,7 @@
 #define /*does this work now*/n_val 6
 #define r_val 3
    
-#define n /*hello*/ 0
+#define n/*hello*/ 0
 #define r 1
 #define n_minus_r /*hey*/2
 #define one 3
@@ -21,7 +21,7 @@
 br imported_function
 
 // main function
-./*fdsaf*/ main:
+./*fdsaf*/main:
 br init// yooo
 
 add        fact_arg,n zero // to copy registers

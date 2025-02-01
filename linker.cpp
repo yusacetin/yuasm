@@ -4,7 +4,7 @@
 #include <sstream>
 #include <iomanip>
 
-Linker::Linker(std::vector<std::string> set_fpaths) {
+Linker::Linker(std::vector<std::string> set_fpaths, bool set_standalone_mode) : standalone_mode(set_standalone_mode) {
     fpaths = set_fpaths;
     int no_of_files = fpaths.size();
     defs.resize(no_of_files);
@@ -248,6 +248,11 @@ int Linker::place_symbols() {
             int def_abs_loc = find_symbol(symbol_name);
             if (def_abs_loc < 0) {
                 std::cerr << "Error: symbol not found: " << symbol_name << "\n";
+                if (!standalone_mode) {
+                    std::cerr << "Please call the linker manually with all object files\n";
+                } else {
+                    std::cerr << "Please make sure to call the linker with all object files\n";
+                }
                 return 1;
             }
             
