@@ -4,7 +4,7 @@ An assembler I'm working on for fun for a fictional ISA. Programs can be run wit
 
 ### System Overview
 
-The architecture operates on 256 general purpose registers. Why so many? I wanted to have 32 but I also wanted the program binaries to be easily readable in hexadecimal so I didn't want to split up a hexadecimal digit into different fields. The high number of registers enables registers to be used as variable storages in small programs instead of the memory. Values can be written to and read from registers using all common addressing modes.
+The architecture operates on 256 general purpose registers. Why so many? I wanted to have 32 but I also wanted the program binaries to be easily readable in hexadecimal so I didn't want to split up a hexadecimal digit into different fields. The high number of registers enables registers to be used as variable storages in small programs instead of the memory. Values can be written to and read from memory using all common addressing modes.
 
 ### Syntax
 
