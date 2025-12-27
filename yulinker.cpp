@@ -12,24 +12,24 @@ Linker::Linker(std::vector<std::string> set_fpaths, bool set_standalone_mode) : 
     link();
 }
 
-int Linker::link() {
-    if (save_defs_and_callers_and_instrs() != 0) {
-        return 1;
+bool Linker::link() {
+    if (!save_defs_and_callers_and_instrs()) {
+        return false;
     }
 
-    if (place_symbols() != 0) {
-        return 1;
+    if (!place_symbols()) {
+        return false;
     }
 
-    if (write_binary() != 0) {
-        return 1;
+    if (!write_binary()) {
+        return false;
     }
 
     std::cout << "Created program binary\n";
-    return 0;
+    return true;
 }
 
-int Linker::save_defs_and_callers_and_instrs() {
+bool Linker::save_defs_and_callers_and_instrs() {
     for (int i=0; i<fpaths.size(); i++) {
         std::string fpath = fpaths[i];
 
@@ -207,7 +207,7 @@ int Linker::save_defs_and_callers_and_instrs() {
 
         if (count_bytes % 4 != 0) {
             std::cerr << "Error: object file misalignment\n";
-            return 1;
+            return false;
         }
 
         int count = count_bytes / 4;
@@ -224,10 +224,10 @@ int Linker::save_defs_and_callers_and_instrs() {
         print_vuc(instrs);
     }
 
-    return 0;
+    return true;
 }
 
-int Linker::place_symbols() {
+bool Linker::place_symbols() {
     for (int filei=0; filei<callers.size(); filei++) {
         std::multimap<std::string, int> cur_map = callers[filei];
         // Step 0: initiate loop
@@ -253,7 +253,7 @@ int Linker::place_symbols() {
                 } else {
                     std::cerr << "Please make sure to call the linker with all object files\n";
                 }
-                return 1;
+                return false;
             }
             
             // step 2: calculate jump amount to reach symbol
@@ -317,7 +317,7 @@ int Linker::place_symbols() {
             }      
         }
     }
-    return 0;
+    return true;
 }
 
 int Linker::find_symbol(std::string symbol_name) {
@@ -343,7 +343,7 @@ int Linker::find_symbol(std::string symbol_name) {
     return -1;
 }
 
-int Linker::write_binary() {
+bool Linker::write_binary() {
     if (DEBUG_LEVEL >= 11) {
         print_vuc(instrs);
     }
@@ -355,7 +355,7 @@ int Linker::write_binary() {
     }
 
     bin_file.close();
-    return 0;
+    return true;
 }
 
 // Static functions
