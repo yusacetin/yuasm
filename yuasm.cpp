@@ -1157,8 +1157,8 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
             //std::cout << "new params 1: " << params[1] << newl;
         }
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t val = param_to_int(params[1]);
+        uint32_t rd = param_to_int(params[0]) & 0xFF;
+        uint32_t val = param_to_int(params[1]) & 0xFFFF;
         if (neg) {
             val = twos_complement(val) & 0xFFFF;
         }
@@ -1168,6 +1168,26 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Load Immediate, rd=" << rd << ", val=" << val << " --> " << get_instr_as_hex(instr_int) << newl;
+        }
+
+    } else if (instr == "uloadm") {
+        // Arguments: rd, val
+
+        if (params[0][0] == '-') {
+            print_line_to_std_err();
+            std::cerr << "Error: rd value can not be negative\n";
+            return false;
+        }
+
+        uint32_t rd = param_to_int(params[0]) & 0xFF;
+        uint32_t val = param_to_int(params[1]) & 0xFFFF;
+
+        instr_int += rd << 16;
+        instr_int += val;
+        instr_int |= 0x5 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Unsigned Load Immediate, rd=" << rd << ", val=" << val << " --> " << get_instr_as_hex(instr_int) << newl;
         }
 
     } else if (instr == "loadr") {
@@ -1958,6 +1978,8 @@ uint32_t Yuasm::get_no_of_params_for_instr(std::string instr) {
     } else if (instr == "br") {
         return 1;
     } else if (instr == "brif") {
+        return 2;
+    } else if (instr == "uloadm") {
         return 2;
     }
     throw std::runtime_error("Invalid instruction: " + instr);
