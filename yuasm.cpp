@@ -14,7 +14,7 @@
 
 Yuasm::Yuasm(std::string first_fname) {
     ofname = generate_ofname(first_fname);
-    if (open_new_file(first_fname) == 0) {
+    if (open_new_file(first_fname)) {
         mainloop();
     }
 }
@@ -76,7 +76,7 @@ bool Yuasm::mainloop() {
                     case AST: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character: " << ch << newl;
-                        return 1;
+                        return false;
                     }
 
                     // Don't Care: SP, LF, CR, EOF
@@ -115,7 +115,7 @@ bool Yuasm::mainloop() {
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character: " << ch << ", expected semicolon, comment, or new line" << newl;
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -145,7 +145,7 @@ bool Yuasm::mainloop() {
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character: " << ch  << "(" << (int) ch << ")" << ", expected comment or new line" << newl;
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -176,7 +176,7 @@ bool Yuasm::mainloop() {
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: expected '/' or '*' but got " << ch << "(" << (int) ch << ")" << newl;
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -256,7 +256,7 @@ bool Yuasm::mainloop() {
                     case CR: { // these are invalid, we expect a keyword
                         print_line_to_std_err();
                         std::cerr << "Error: expected keyword for preprocessing directive\n";
-                        return 1;
+                        return false;
                     }
                      
                     case AL: { // scan the keyword
@@ -270,7 +270,7 @@ bool Yuasm::mainloop() {
                         } else {
                             print_line_to_std_err();
                             std::cerr << "Error: identifiers can't begin with numbers\n";
-                            return 1;
+                            return false;
                         }
                         break;
                     }
@@ -287,7 +287,7 @@ bool Yuasm::mainloop() {
                         } else {
                             print_line_to_std_err();
                             std::cerr << "Error: invalid preprocessor directive: " << buffer_str << newl;
-                            return 1;
+                            return false;
                         }
                         break;
                     }
@@ -300,7 +300,7 @@ bool Yuasm::mainloop() {
                         } else {
                             print_line_to_std_err();
                             std::cerr << "Error: expected parameters for preprocessor directive" << newl;
-                            return 1;
+                            return false;
                         }
 
                         std::string buffer_str(buffer0.begin(), buffer0.end());
@@ -313,7 +313,7 @@ bool Yuasm::mainloop() {
                         } else {
                             print_line_to_std_err();
                             std::cerr << "Error: invalid preprocessor directive: " << buffer_str << newl;
-                            return 1;
+                            return false;
                         }
                         break;
                     }
@@ -321,7 +321,7 @@ bool Yuasm::mainloop() {
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character for preprocessor directive key: " << ch << newl;
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -335,7 +335,7 @@ bool Yuasm::mainloop() {
                     case CR: { // these are invalid, we expect a parameter
                         print_line_to_std_err();
                         std::cerr << "Error: expected macro name for preprocessing directive\n";
-                        return 1;
+                        return false;
                     }
                      
                     case AL: { // scan the name
@@ -349,7 +349,7 @@ bool Yuasm::mainloop() {
                         } else {
                             print_line_to_std_err();
                             std::cerr << "Error: identifiers can't begin with numbers\n";
-                            return 1;
+                            return false;
                         }
                         break;
                     }
@@ -381,7 +381,7 @@ bool Yuasm::mainloop() {
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character for macro name: " << ch << newl;
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -403,7 +403,7 @@ bool Yuasm::mainloop() {
                         } else {
                             print_line_to_std_err();
                             std::cerr << "Error: invalid character for macro value: " << ch << newl;
-                            return 1;
+                            return false;
                         }
                         break;
                     }
@@ -487,13 +487,13 @@ bool Yuasm::mainloop() {
                     case SC: {
                         print_line_to_std_err();
                         std::cerr << "Error: semicolon not allowed after preprocessor directives" << newl;
-                        return 1;
+                        return false;
                     }
 
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character for macro value: " << ch << newl;
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -521,13 +521,13 @@ bool Yuasm::mainloop() {
 
                         print_line_to_std_err();
                         std::cerr << "Error: expected double quote mark ('\"') but got '/'" << newl;
-                        return 1;
+                        return false;
                     }
 
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character: " << ch << newl;
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -557,7 +557,7 @@ bool Yuasm::mainloop() {
                         if (!(*file)) {
                             print_line_to_std_err();
                             std::cerr << "Error: file not found: " << fpath << std::endl;
-                            return 1;
+                            return false;
                         }
                         files.push(std::move(file));
                         line_counters.push(1);
@@ -577,7 +577,7 @@ bool Yuasm::mainloop() {
                     default: { // EOF
                         print_line_to_std_err();
                         std::cerr << "Error: invalid file name\n";
-                        return -1;
+                        return false;
                     }
                 }
                 break;
@@ -594,7 +594,7 @@ bool Yuasm::mainloop() {
                     case NUM: {
                         print_line_to_std_err();
                         std::cerr << "Error: function names can't begin with numbers" << newl;
-                        return 1;
+                        return false;
                     }
 
                     case AL: {
@@ -612,13 +612,13 @@ bool Yuasm::mainloop() {
 
                         print_line_to_std_err();
                         std::cerr << "Error: missing function name" << newl;
-                        return 1;
+                        return false;
                     }
 
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character: " << ch << newl;
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -663,7 +663,7 @@ bool Yuasm::mainloop() {
                         } else {
                             print_line_to_std_err();
                             std::cerr << "Error: expected colon" << newl;
-                            return 1;
+                            return false;
                         }
 
                         std::string buffer_str(buffer0.begin(), buffer0.end());
@@ -688,7 +688,7 @@ bool Yuasm::mainloop() {
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character in function name: " << ch << newl;
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -716,13 +716,13 @@ bool Yuasm::mainloop() {
 
                         print_line_to_std_err();
                         std::cerr << "Error: missing colon" << newl;
-                        return 1;
+                        return false;
                     }
 
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character: " << ch << newl;
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -736,8 +736,8 @@ bool Yuasm::mainloop() {
                     case LF:
                     case CR: { // these are invalid, we expect a parameter
                         std::string instr(buffer0.begin(), buffer0.end());
-                        if (eval_instr(instr, params) != 0) {
-                            return 1;
+                        if (!eval_instr(instr, params)) {
+                            return false;
                         }
 
                         buffer0.clear();
@@ -762,8 +762,8 @@ bool Yuasm::mainloop() {
                         }
 
                         std::string instr(buffer0.begin(), buffer0.end());
-                        if (eval_instr(instr, params) != 0) {
-                            return 1;
+                        if (!eval_instr(instr, params)) {
+                            return false;
                         }
 
                         buffer0.clear();
@@ -785,7 +785,7 @@ bool Yuasm::mainloop() {
                         } else {
                             print_line_to_std_err();
                             std::cerr << "Error: identifiers can't begin with numbers\n";
-                            return 1;
+                            return false;
                         }
                         break;
                     }
@@ -800,7 +800,7 @@ bool Yuasm::mainloop() {
                         } else {
                             print_line_to_std_err();
                             std::cerr << "Error: invalid instruction (1): " << buffer_str << newl;
-                            return 1;
+                            return false;
                         }
                         break;
                     }
@@ -817,7 +817,7 @@ bool Yuasm::mainloop() {
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character for instruction or macro: " << ch << newl;
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -844,7 +844,7 @@ bool Yuasm::mainloop() {
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: expected ')'\n";
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -917,14 +917,14 @@ bool Yuasm::mainloop() {
                                 if (params.size() > 0 && buffer1.empty()) { // buffer1.empty() is guaranteed but still
                                     print_line_to_std_err();
                                     std::cerr << "Error: comma not allowed here" << newl;
-                                    return 1;
+                                    return false;
                                 }
                             }
                         }
 
                         std::string instr(buffer0.begin(), buffer0.end());
-                        if (eval_instr(instr, params) != 0) {
-                            return 1;
+                        if (!eval_instr(instr, params)) {
+                            return false;
                         }
 
                         buffer1.clear();
@@ -939,7 +939,7 @@ bool Yuasm::mainloop() {
                         } else {
                             print_line_to_std_err();
                             std::cerr << "Error: Invalid char: " << ch << newl;
-                            return 1;
+                            return false;
                         }
                         break;
                     }
@@ -980,14 +980,14 @@ bool Yuasm::mainloop() {
                                 if (params.size() > 0 && buffer1.empty()) { // buffer1.empty() is guaranteed but still
                                     print_line_to_std_err();
                                     std::cerr << "Error: comma not allowed here" << newl;
-                                    return 1;
+                                    return false;
                                 }
                             }
                         }
 
                         std::string instr(buffer0.begin(), buffer0.end());
-                        if (eval_instr(instr, params) != 0) {
-                            return 1;
+                        if (!eval_instr(instr, params)) {
+                            return false;
                         }
 
                         buffer1.clear();
@@ -1008,12 +1008,12 @@ bool Yuasm::mainloop() {
                             } else {
                                 print_line_to_std_err();
                                 std::cerr << "Error: can't have negative sign in the middle of an identifier" << newl;
-                                return 1;
+                                return false;
                             }
                         } else if (state == SCAN_PARAM_NO_COMMA_NO_DASH) {
                             print_line_to_std_err();
                             std::cerr << "Error: double negation is not allowed" << newl;
-                            return 1;
+                            return false;
                         }
                         break;
                     }
@@ -1040,7 +1040,7 @@ bool Yuasm::mainloop() {
                             if (buffer1.empty()) {
                                 print_line_to_std_err();
                                 std::cerr << "Error: comma not allowed here" << newl;
-                                return 1;
+                                return false;
                             } else {
                                 // being here means the comma is used to terminate a parameter which is ok
                                 expand_macro(&buffer1, macros);
@@ -1065,7 +1065,7 @@ bool Yuasm::mainloop() {
                     default: {
                         print_line_to_std_err();
                         std::cerr << "Error: invalid character: " << ch << newl;
-                        return 1;
+                        return false;
                     }
                 }
                 break;
@@ -1098,7 +1098,7 @@ bool Yuasm::mainloop() {
         std::cout << newl;
     }
 
-    return 0;
+    return true;
 }
 
 bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
@@ -1115,13 +1115,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     if (no_of_params < 0) {
         print_line_to_std_err();
         std::cerr << "Error: invalid instruction (2): " << instr << newl;
-        return 1;
+        return false;
     }
 
     if (no_of_params != params.size()) {
         print_line_to_std_err();
         std::cerr << "Error: expected " << no_of_params << " arguments, got " << params.size() << newl;
-        return 1;
+        return false;
     }
 
     for (int i=0; i<params.size(); i++) { // check for illegal negatives
@@ -1129,7 +1129,7 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
             if (instr != "loadm") {
                 print_line_to_std_err();
                 std::cerr << "Error: parameter can not be negative: " << params[i] << newl;
-                return 1;
+                return false;
             }
         }
     }
@@ -1146,7 +1146,7 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         if (params[0][0] == '-') {
             print_line_to_std_err();
             std::cerr << "Error: rd value can not be negative\n";
-            return 1;
+            return false;
         }
 
         bool neg = false;
@@ -1595,7 +1595,7 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
 
     instructions.push_back(instr_int);
 
-    return 0;
+    return true;
 }
 
 bool Yuasm::open_new_file(std::string fname) {
@@ -1603,12 +1603,12 @@ bool Yuasm::open_new_file(std::string fname) {
     if (!(*file)) {
         print_line_to_std_err();
         std::cerr << "Error: file not found" << std::endl;
-        return 1;
+        return false;
     }
     files.push(std::move(file));
     fnames.push(fname);
     line_counters.push(1);
-    return 0;
+    return true;
 }
 
 bool Yuasm::write_object() {
@@ -1639,7 +1639,7 @@ bool Yuasm::write_object() {
         if (len > 65535) {
             print_line_to_std_err();
             std::cerr << "Error: symbol name length must be at most 16 bits\n";
-            return 1;
+            return false;
         }
 
         // write len
@@ -1691,7 +1691,7 @@ bool Yuasm::write_object() {
         if (len > 65535) {
             print_line_to_std_err();
             std::cerr << "Error: symbol name length must be at most 16 bits\n";
-            return 1;
+            return false;
         }
 
         // write len
@@ -1736,22 +1736,14 @@ bool Yuasm::write_object() {
     }
 
     obj_file.close();
-    return 0;
+    return true;
 }
 
 bool Yuasm::link_object() {
     std::vector<std::string> obj_vec;
     obj_vec.push_back("objects/" + ofname);
     Linker linker(obj_vec, false);
-    return 0;
-}
-
-bool Yuasm::get_function_index(std::string func) {
-    if (functions.find(func) != functions.end()) {
-        int index = functions[func];
-        return index;
-    }
-    return -1;
+    return true;
 }
 
 std::string Yuasm::print_state() {
@@ -1840,23 +1832,17 @@ uint32_t Yuasm::param_to_int(std::string param) {
         uint32_t digit_value;
         if (radix == 10) {
             if (!is_numeric(digit_char)) {
-                std::cerr << "Error: invalid decimal number: " << param << newl;
-                std::exit(1);
-                return 0; // TODO handle properly
+                throw std::runtime_error("Invalid decimal number: " + param);
             }
             digit_value = digit_char - '0';
         } else if (radix == 16) {
             if (!is_hex_digit(digit_char)) {
-                std::cerr << "Error: invalid hexadecimal number: " << param << newl;
-                std::exit(1);
-                return 0; // TODO handle properly
+                throw std::runtime_error("Invalid hexadecimal number: " + param);
             }
             digit_value = get_hex_value(digit_char);
         } else if (radix == 2) {
             if (digit_char != '0' && digit_char != '1') {
-                std::cerr << "Error: invalid binary number: " << param << newl;
-                std::exit(1);
-                return 0; // TODO handle properly
+                throw std::runtime_error("Invalid binary number: " + param);
             }
             digit_value = digit_char - '0';
         }
@@ -1974,7 +1960,7 @@ uint32_t Yuasm::get_no_of_params_for_instr(std::string instr) {
     } else if (instr == "brif") {
         return 2;
     }
-    return -1;
+    throw std::runtime_error("Invalid instruction: " + instr);
 }
 
 bool Yuasm::is_hex_digit(char c) { // parameter must be uppercase

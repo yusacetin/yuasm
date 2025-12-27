@@ -90,7 +90,6 @@ class Yuasm {
         bool mainloop();
         std::string print_state();
         bool eval_instr(std::string instr, std::vector<std::string> params);
-        bool get_function_index(std::string func);
         bool write_object();
         bool link_object();
         void print_line_to_std_err();
