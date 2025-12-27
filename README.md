@@ -1,10 +1,10 @@
-## YuASM - Work In Progress
+## YuASM
 
 An assembler I'm working on for fun for a fictional ISA. Programs can be run with [Yuemu](https://github.com/yusacetin/yuemu). It's still a work in progress so there are some known issues and testing hasn't been done thoroughly. For example, the last instruction isn't read if there isn't a trailing new line character after it.
 
 ### System Overview
 
-The architecture operates on 256 general purpose registers. Why so many? I wanted to have 32 but I also wanted the program binaries to be easily readable in hexadecimal so I didn't want to split up a hexadecimal digit into different fields. The high number of registers enables registers to be used as variable storages in small programs instead of the memory. Values can be written to and read from memory using all common addressing modes.
+The architecture operates on 256 general purpose registers at the moment but I plan to change it to 16 later. Values can be written to and read from memory using all common addressing modes.
 
 ### Syntax
 
@@ -42,7 +42,12 @@ The terms 'function' and 'section' are used interchangably throughout the source
 
 #### Instructions
 
-See `instructions.txt` for a complete list of instructions and their bit maps. Instructions are written as the instruction name followed by any parameters. Number of parameters is fixed for each instruction. See the example in the [Comments](#comments) section.
+See `instructions.txt` for a complete list of instructions and their bit maps. Instructions are written as the instruction name followed by any parameters. Number of parameters is fixed for each instruction.
+
+```
+add a b c
+mul 1 b 3
+```
 
 ### License
 

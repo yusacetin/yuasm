@@ -1,1 +1,1 @@
-g++ linker_main.cpp linker.cpp -o linker
+g++ yulinker_main.cpp yulinker.cpp -o yulinker

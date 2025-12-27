@@ -1,16 +1,21 @@
+#ifndef YUASM_H
+#define YUASM_H
+
 #include <fstream>
 #include <string>
 #include <vector>
 #include <map>
 #include <stack>
 #include <memory>
+#include <cstdint>
+
+using uint32_t = std::uint32_t;
+
+inline constexpr char newl[] = "\n";
 
 class Yuasm {
     public:
         Yuasm(std::string first_fname);
-
-    private:
-        const int DEBUG_LEVEL = 0; // 0: instr info, 1: state completions, 2: full info
 
         enum State {
             SCAN_FIRST,
@@ -34,7 +39,8 @@ class Yuasm {
             SCAN_PARAM_YES_COMMA_YES_DASH,
             SCAN_PARAM_YES_COMMA_NO_DASH,
             SCAN_PARAM_NO_COMMA_YES_DASH,
-            SCAN_PARAM_NO_COMMA_NO_DASH
+            SCAN_PARAM_NO_COMMA_NO_DASH,
+            INVALID_STATE
         };
 
         enum Input {
@@ -58,12 +64,15 @@ class Yuasm {
             QUOTE
         };
 
-        int state = SCAN_FIRST;
+    private:
+        static constexpr int DEBUG_LEVEL = 0; // 0: instr info, 1: state completions, 2: full info
+
+        State state = SCAN_FIRST;
 
         std::vector<char> buffer0; // for instructions and function names and macro names
         std::vector<char> buffer1; // for macro values and instruction parameters
         std::vector<std::string> params; // for instruction parameters
-        std::vector<unsigned int> instructions;
+        std::vector<uint32_t> instructions;
         std::vector<char> line_buffer; // used in error messages
         std::stack<int> line_counters; // used in error messages (a counter per file)
         std::stack<std::string> fnames; // used in error messages
@@ -73,30 +82,32 @@ class Yuasm {
         std::map<std::string, std::string> macros;
         std::map<std::string, int> functions; // should be called sections really
         std::multimap<std::string, int> callers; // caller positions
-        int pc = 0; // program counter
+        uint32_t pc = 0; // program counter
 
-        int state_before_block_comment; // TODO not properly implemented
+        State state_before_block_comment; // TODO not properly implemented
 
-        int open_new_file(std::string fname);
-        int mainloop();
+        bool open_new_file(std::string fname);
+        bool mainloop();
         std::string print_state();
-        int eval_instr(std::string instr, std::vector<std::string> params);
-        int get_function_index(std::string func);
-        int write_object();
-        int link_object();
+        bool eval_instr(std::string instr, std::vector<std::string> params);
+        bool get_function_index(std::string func);
+        bool write_object();
+        bool link_object();
         void print_line_to_std_err();
-        int get_next_char_category();
+        Input get_next_char_category();
 
         static void expand_macro(std::vector<char>* buffer, std::map<std::string, std::string> macro_list);
-        static const int get_category(char ch);
+        static const Input get_category(char ch);
         static bool is_alphabetic(char ch);
         static bool is_numeric(char ch);
-        static int get_no_of_params_for_instr(std::string instr); // returns -1 if instruction is invalid
-        static unsigned int param_to_int(std::string param);
+        static uint32_t get_no_of_params_for_instr(std::string instr); // returns -1 if instruction is invalid
+        static uint32_t param_to_int(std::string param);
         static bool is_hex_digit(char c);
         static bool is_binary_digit(char c);
-        static unsigned int get_hex_value(char c);
-        static std::string get_instr_as_hex(unsigned int instr_int);
-        static unsigned int twos_complement(unsigned int val);
+        static uint32_t get_hex_value(char c);
+        static std::string get_instr_as_hex(uint32_t instr_int);
+        static uint32_t twos_complement(uint32_t val);
         static std::string generate_ofname(std::string fpath);
 };
+
+#endif

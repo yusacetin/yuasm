@@ -1,4 +1,4 @@
-#include "yuasm.hpp"
+#include "yuasm.h"
 #include <iostream>
 #include <string>
 
