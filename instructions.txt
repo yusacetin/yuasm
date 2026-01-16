@@ -16,12 +16,12 @@ pc: program counter
 Memory (category 0x0)
 ---------------------
 
-loadm rd val: r[rd] = sign_extend(val) --> 0000_0000_8-bits-rd_16-bits-val
-loadr rd raddr: r[rd] = m[r[raddr]] --> 0000_0001_8-bits-rd_8-bits-raddr_8-bits-skip
-storen raddr rs: m[r[raddr]] = r[rs] --> 0000_0010_8-bits-raddr_8-bits-rs_8-bits-skip
-stored addr rs:  m[addr] = r[rs] --> 0000_0011_16-bits-addr_8-bits-rs
-loadd rd addr: r[rd] = m[addr] --> 0000_0100_8-bits-rd_16-bits-addr
-uloadm rd val: r[rd] = val --> 0000_0101_8-bits-rd_16-bits-val
+uloadm rd val: r[rd] = val --> 0000_0000_8-bits-rd_16-bits-val
+loadm rd val: r[rd] = sign_extend(val) --> 0000_0001_8-bits-rd_16-bits-val
+loadr rd raddr: r[rd] = m[r[raddr]] --> 0000_0010_8-bits-rd_8-bits-raddr_8-bits-skip
+storen raddr rs: m[r[raddr]] = r[rs] --> 0000_0011_8-bits-raddr_8-bits-rs_8-bits-skip
+stored addr rs:  m[addr] = r[rs] --> 0000_0100_16-bits-addr_8-bits-rs
+loadd rd addr: r[rd] = m[addr] --> 0000_0101_8-bits-rd_16-bits-addr
 
 
 Arithmetic (category 0x1)

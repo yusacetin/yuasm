@@ -4,7 +4,7 @@ An assembler I'm working on for fun for a fictional ISA. Programs can be run wit
 
 ### System Overview
 
-The architecture operates on 256 general purpose registers at the moment but I plan to change it to 16 later to make it reflect real ISAs more closely. Values can be written to and read from memory using all common addressing modes.
+The architecture operates on 256 general purpose registers (I plan to change it to 16 to make it reflect real ISAs more closely). Values can be written to and read from memory using all common addressing modes.
 
 ### Syntax
 

@@ -1140,7 +1140,27 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
 
     uint32_t instr_int = 0;
 
-    if (instr == "loadm") {
+    if (instr == "uloadm") {
+        // Arguments: rd, val
+
+        if (params[0][0] == '-') {
+            print_line_to_std_err();
+            std::cerr << "Error: rd value can not be negative\n";
+            return false;
+        }
+
+        uint32_t rd = param_to_int(params[0]) & 0xFF;
+        uint32_t val = param_to_int(params[1]) & 0xFFFF;
+
+        instr_int += rd << 16;
+        instr_int += val;
+        instr_int |= 0x0 << 24;
+
+        if (DEBUG_LEVEL >= 0) {
+            std::cout << "Unsigned Load Immediate, rd=" << rd << ", val=" << val << " --> " << get_instr_as_hex(instr_int) << newl;
+        }
+
+    } else if (instr == "loadm") {
         // Arguments: rd, val
 
         if (params[0][0] == '-') {
@@ -1165,29 +1185,10 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
 
         instr_int += rd << 16;
         instr_int += val;
+        instr_int |= 0x1 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Load Immediate, rd=" << rd << ", val=" << val << " --> " << get_instr_as_hex(instr_int) << newl;
-        }
-
-    } else if (instr == "uloadm") {
-        // Arguments: rd, val
-
-        if (params[0][0] == '-') {
-            print_line_to_std_err();
-            std::cerr << "Error: rd value can not be negative\n";
-            return false;
-        }
-
-        uint32_t rd = param_to_int(params[0]) & 0xFF;
-        uint32_t val = param_to_int(params[1]) & 0xFFFF;
-
-        instr_int += rd << 16;
-        instr_int += val;
-        instr_int |= 0x5 << 24;
-
-        if (DEBUG_LEVEL >= 0) {
-            std::cout << "Unsigned Load Immediate, rd=" << rd << ", val=" << val << " --> " << get_instr_as_hex(instr_int) << newl;
         }
 
     } else if (instr == "loadr") {
@@ -1198,7 +1199,7 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
 
         instr_int += rd << 16;
         instr_int += raddr << 8;
-        instr_int |= 0x01 << 24;
+        instr_int |= 0x02 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Load Direct, rd=" << rd << ", raddr=" << raddr << " --> " << get_instr_as_hex(instr_int) << newl;
@@ -1212,7 +1213,7 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
 
         instr_int += raddr << 16;
         instr_int += rs << 8;
-        instr_int |= 0x02 << 24;
+        instr_int |= 0x03 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Store Indirect, raddr=" << raddr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << newl;
@@ -1450,7 +1451,7 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Branch If, val=" << val << ", rcond=" << rcond << " --> " << get_instr_as_hex(instr_int) << newl;
         }
-    } else if (instr == "stored") { // 0000_0011_16-bits-addr_8-bits-rs
+    } else if (instr == "stored") { // 0000_0100_16-bits-addr_8-bits-rs
         // Arguments: addr, rs
 
         uint32_t addr = param_to_int(params[0]);
@@ -1458,12 +1459,12 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
 
         instr_int += addr << 8;
         instr_int += rs;
-        instr_int |= 0x03 << 24;
+        instr_int |= 0x04 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Store Direct, addr=" << addr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << newl;
         }
-    } else if (instr == "loadd") { // 0000_0100_8-bits-rd_16-bits-addr
+    } else if (instr == "loadd") { // 0000_0101_8-bits-rd_16-bits-addr
         // Arguments: rd, addr
 
         uint32_t rd = param_to_int(params[0]);
@@ -1471,7 +1472,7 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
 
         instr_int += rd << 16;
         instr_int += addr;
-        instr_int |= 0x04 << 24;
+        instr_int |= 0x05 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Load Direct, rd=" << rd << ", addr=" << addr << " --> " << get_instr_as_hex(instr_int) << newl;
