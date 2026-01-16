@@ -16,21 +16,21 @@ pc: program counter
 Memory (category 0x0)
 ---------------------
 
-uloadm rd val: r[rd] = val --> 0000_0000_8-bits-rd_16-bits-val
-loadm rd val: r[rd] = sign_extend(val) --> 0000_0001_8-bits-rd_16-bits-val
-loadr rd raddr: r[rd] = m[r[raddr]] --> 0000_0010_8-bits-rd_8-bits-raddr_8-bits-skip
-storen raddr rs: m[r[raddr]] = r[rs] --> 0000_0011_8-bits-raddr_8-bits-rs_8-bits-skip
-stored addr rs:  m[addr] = r[rs] --> 0000_0100_16-bits-addr_8-bits-rs
-loadd rd addr: r[rd] = m[addr] --> 0000_0101_8-bits-rd_16-bits-addr
+uloadm rd val: r[rd] = val --> 0000_0000_4-bits-rd_20-bits-val
+loadm rd val: r[rd] = sign_extend(val) --> 0000_0001_4-bits-rd_20-bits-val
+loadr rd raddr: r[rd] = m[r[raddr]] --> 0000_0010_4-bits-rd_4-bits-raddr_16-bits-skip
+storen raddr rs: m[r[raddr]] = r[rs] --> 0000_0011_4-bits-raddr_4-bits-rs_16-bits-skip
+stored addr rs:  m[addr] = r[rs] --> 0000_0100_20-bits-addr_4-bits-rs
+loadd rd addr: r[rd] = m[addr] --> 0000_0101_4-bits-rd_20-bits-addr
 
 
 Arithmetic (category 0x1)
 -------------------------
 
-add rd rs1 rs2: r[rd] = r[rs1] + r[rs2] --> 0001_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
-sub rd rs1 rs2: r[rd] = r[rs1] - r[rs2] --> 0001_0001_8-bits-rd_8-bits-rs1_8-bits-rs2
-mul rd rs1 rs2: r[rd] = r[rs1] * r[rs2] --> 0001_0010_8-bits-rd_8-bits-rs1_8-bits-rs2
-div rd rs1 rs2: r[rd] = r[rs1] / r[rs2] --> 0001_0011_8-bits-rd_8-bits-rs1_8-bits-rs2
+add rd rs1 rs2: r[rd] = r[rs1] + r[rs2] --> 0001_0000_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+sub rd rs1 rs2: r[rd] = r[rs1] - r[rs2] --> 0001_0001_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+mul rd rs1 rs2: r[rd] = r[rs1] * r[rs2] --> 0001_0010_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+div rd rs1 rs2: r[rd] = r[rs1] / r[rs2] --> 0001_0011_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
 
 
 Control (category 0x2)
@@ -39,42 +39,42 @@ Control (category 0x2)
 Note: "val" in jump, jumpif, br, and brif should only be function/section names. Avoid using actual numbers.
 
 jump val: pc += val --> 0010_0000_24-bits-val
-jumpd rs: pc += r[rs] --> 0010_0001_8-bits-rs_skip-16-bits
+jumpd rs: pc += r[rs] --> 0010_0001_4-bits-rs_20-bits-skip
 
-jumpif val rcond: pc += val if r[rcond] > 0 --> 0010_0010_16-bits-val_8-bits-rcond
-jumpifd rs rcond: pc += r[rs] if r[rcond] > 0 --> 0010_0011_8-bits-rs_8-bits-skip_8-bits-rcond
+jumpif val rcond: pc += val if r[rcond] > 0 --> 0010_0010_20-bits-val_4-bits-rcond
+jumpifd rs rcond: pc += r[rs] if r[rcond] > 0 --> 0010_0011_4-bits-rs_16-bits-skip_4-bits-rcond
 
-ret: return to caller --> 0010_00100_24-bits-skip
-end: infinite self loop --> 0010_00101_24-bits-skip
+ret: return to caller --> 0010_0100_24-bits-skip
+end: infinite self loop --> 0010_0101_24-bits-skip
 
 br val: pc += val, push return addr to stack --> 0010_0110_24-bits-val
-brif val rcond: pc += val if r[rcond] > 0, push return addr to stack --> 0010_0111_16-bits-val_8-bits-rcond
+brif val rcond: pc += val if r[rcond] > 0, push return addr to stack --> 0010_0111_20-bits-val_4-bits-rcond
 
 
 Logical (category 0x3)
 ----------------------
 
-and rd rs1 rs2: r[rd] = r[rs1] & r[rs2] --> 0011_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
-or rd rs1 rs2: r[rd] = r[rs1] | r[rs2] --> 0011_0001_8-bits-rd_8-bits-rs1_8-bits-rs2
+and rd rs1 rs2: r[rd] = r[rs1] & r[rs2] --> 0011_0000_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+or rd rs1 rs2: r[rd] = r[rs1] | r[rs2] --> 0011_0001_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
 
-nand rd rs1 rs2: r[rd] = ~(r[rs1] & r[rs2]) --> 0011_0010_8-bits-rd_8-bits-rs1_8-bits-rs2
-nor rd rs1 rs2: r[rd] = ~(r[rs1] | r[rs2]) --> 0011_0011_8-bits-rd_8-bits-rs1_8-bits-rs2
+nand rd rs1 rs2: r[rd] = ~(r[rs1] & r[rs2]) --> 0011_0010_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+nor rd rs1 rs2: r[rd] = ~(r[rs1] | r[rs2]) --> 0011_0011_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
 
-xor rd rs1 rs2: r[rd] = r[rs1] ^ r[rs2] --> 0011_0100_8-bits-rd_8-bits-rs1_8-bits-rs2
+xor rd rs1 rs2: r[rd] = r[rs1] ^ r[rs2] --> 0011_0100_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
 
 
 Shift (category 0x4)
 --------------------
 
-lshift rd rs1 rs2: r[rd] = r[rs1] << r[rs2] --> 0001_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
-rshift rd rs1 rs2: r[rd] = r[rs1] >> r[rs2] --> 0001_0001_8-bits-rd_8-bits-rs1_8-bits-rs2
+lshift rd rs1 rs2: r[rd] = r[rs1] << r[rs2] --> 0001_0000_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+rshift rd rs1 rs2: r[rd] = r[rs1] >> r[rs2] --> 0001_0001_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
 
 
 Comparison (category 0x5)
 -------------------------
 
-lt rd rs1 rs2: r[rd] = r[rs1] < r[rs2] --> 0001_0000_8-bits-rd_8-bits-rs1_8-bits-rs2
-lte rd rs1 rs2: r[rd] = r[rs1] <= r[rs2] --> 0001_0001_8-bits-rd_8-bits-rs1_8-bits-rs2
-gt rd rs1 rs2: r[rd] = r[rs1] > r[rs2] --> 0001_0010_8-bits-rd_8-bits-rs1_8-bits-rs2
-gte rd rs1 rs2: r[rd] = r[rs1] >= r[rs2] --> 0001_0011_8-bits-rd_8-bits-rs1_8-bits-rs2
-eq rd rs1 rs2: r[rd] = r[rs1] == r[rs2] --> 0001_0100_8-bits-rd_8-bits-rs1_8-bits-rs2
+lt rd rs1 rs2: r[rd] = r[rs1] < r[rs2] --> 0001_0000_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+lte rd rs1 rs2: r[rd] = r[rs1] <= r[rs2] --> 0001_0001_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+gt rd rs1 rs2: r[rd] = r[rs1] > r[rs2] --> 0001_0010_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+gte rd rs1 rs2: r[rd] = r[rs1] >= r[rs2] --> 0001_0011_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+eq rd rs1 rs2: r[rd] = r[rs1] == r[rs2] --> 0001_0100_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip

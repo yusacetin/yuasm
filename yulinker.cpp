@@ -3,6 +3,9 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <cstdint>
+
+using uint32_t = std::uint32_t;
 
 Linker::Linker(std::vector<std::string> set_fpaths, bool set_standalone_mode) : standalone_mode(set_standalone_mode) {
     fpaths = set_fpaths;
@@ -264,7 +267,7 @@ bool Linker::place_symbols() {
 
             // step 3.1
             // for jump and br: 24 bits
-            // for jumpif and brif: 16 bits
+            // for jumpif and brif: 20 bits
 
             int val = 0;
             unsigned char instr_bytes[4];
@@ -272,13 +275,13 @@ bool Linker::place_symbols() {
             if (DEBUG_LEVEL >= 11) {
                 std::cout << symbol_name << " found at " << def_abs_loc << "\n";
                 std::cout << "loc_diff: " << loc_diff << "\n";
-                std::cout << "caller_abs_loc: " << caller_abs_loc << ", value: " << (unsigned int) instrs[caller_abs_loc] << "\n";
-                std::cout << "def_abs_loc: " << def_abs_loc << ", value: " << (unsigned int) instrs[def_abs_loc] << "\n";
+                std::cout << "caller_abs_loc: " << caller_abs_loc << ", value: " << (uint32_t) instrs[caller_abs_loc] << "\n";
+                std::cout << "def_abs_loc: " << def_abs_loc << ", value: " << (uint32_t) instrs[def_abs_loc] << "\n";
             }
 
             if (instrs[caller_abs_loc] == 0x20 || instrs[caller_abs_loc] == 0x26) {
                 val += loc_diff & 0xFFFFFF;
-                unsigned int uint_val = (unsigned int) val;
+                uint32_t uint_val = (uint32_t) val;
                 instr_bytes[0] = (uint_val) & 0xFF;
                 instr_bytes[1] = (uint_val >> 8) & 0xFF;
                 instr_bytes[2] = (uint_val >> 16) & 0xFF;
@@ -291,15 +294,21 @@ bool Linker::place_symbols() {
                 instrs[caller_abs_loc + 3] = instr_bytes[0];
 
             } else if (instrs[caller_abs_loc] == 0x22 || instrs[caller_abs_loc] == 0x27) {
-                val += loc_diff & 0xFFFF;
-                unsigned int uint_val = (unsigned int) val;
+                val += loc_diff & 0xFFFFF;
+                uint32_t uint_val = (uint32_t) val;
+                
                 instr_bytes[0] = (uint_val) & 0xFF;
                 instr_bytes[1] = (uint_val >> 8) & 0xFF;
 
-                // step 4: modify instrs 
+                instr_bytes[0] = (uint_val << 4) & 0xF0; // MSH: val & 0xF, LSH (rcond): leave as it is
+                instr_bytes[1] = (uint_val >> 4) & 0xFF;
+                instr_bytes[2] = (uint_val >> 12) & 0xFF;
 
-                instrs[caller_abs_loc + 1] = instr_bytes[1];
-                instrs[caller_abs_loc + 2] = instr_bytes[0];
+                // step 4: modify instrs 
+                
+                instrs[caller_abs_loc + 1] = instr_bytes[2];
+                instrs[caller_abs_loc + 2] = instr_bytes[1];
+                instrs[caller_abs_loc + 3] |= instr_bytes[0]; // don't touch the LSH (rcond)
             }
 
 

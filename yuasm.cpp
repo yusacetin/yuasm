@@ -1135,7 +1135,7 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     }
 
     // General Rules:
-    // Valid register values are 0 to 255 (inclusively)
+    // Valid register values are 0 to 15 (inclusively)
     // Not all rules are being enforced at the moment so the source code should make sense
 
     uint32_t instr_int = 0;
@@ -1149,11 +1149,11 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
             return false;
         }
 
-        uint32_t rd = param_to_int(params[0]) & 0xFF;
-        uint32_t val = param_to_int(params[1]) & 0xFFFF;
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t val = param_to_int(params[1]) & 0xFFFFF;
 
-        instr_int += rd << 16;
-        instr_int += val;
+        instr_int |= rd << 20;
+        instr_int |= val;
         instr_int |= 0x0 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1177,14 +1177,14 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
             //std::cout << "new params 1: " << params[1] << newl;
         }
 
-        uint32_t rd = param_to_int(params[0]) & 0xFF;
-        uint32_t val = param_to_int(params[1]) & 0xFFFF;
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t val = param_to_int(params[1]) & 0xFFFFF;
         if (neg) {
-            val = twos_complement(val) & 0xFFFF;
+            val = twos_complement(val) & 0xFFFFF;
         }
 
-        instr_int += rd << 16;
-        instr_int += val;
+        instr_int |= rd << 20;
+        instr_int |= val;
         instr_int |= 0x1 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1194,11 +1194,11 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "loadr") {
         // Arguments: rd, raddr
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t raddr = param_to_int(params[1]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t raddr = param_to_int(params[1]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += raddr << 8;
+        instr_int |= rd << 20;
+        instr_int |= raddr << 16;
         instr_int |= 0x02 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1208,11 +1208,11 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "storen") {
         // Arguments: raddr, rs
 
-        uint32_t raddr = param_to_int(params[0]);
-        uint32_t rs = param_to_int(params[1]);
+        uint32_t raddr = param_to_int(params[0]) & 0xF;
+        uint32_t rs = param_to_int(params[1]) & 0xF;
 
-        instr_int += raddr << 16;
-        instr_int += rs << 8;
+        instr_int |= raddr << 20;
+        instr_int |= rs << 16;
         instr_int |= 0x03 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1222,13 +1222,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "add") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x10 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1237,13 +1237,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "sub") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x11 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1252,13 +1252,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "lt") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x50 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1267,13 +1267,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "lte") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x51 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1282,13 +1282,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "gt") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
         
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x52 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1297,13 +1297,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "gte") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x53 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1312,13 +1312,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "eq") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x54 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1335,10 +1335,10 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
             callers.insert({val_str, pc});
             val = 0;
         } else {
-            val = param_to_int(params[0]);
+            val = param_to_int(params[0]) & 0xFFFFFF;
         }
 
-        instr_int += val;
+        instr_int |= val;
         instr_int |= 0x20 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1347,9 +1347,9 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "jumpd") {
         // Arguments: rs
 
-        uint32_t rs = param_to_int(params[0]);
+        uint32_t rs = param_to_int(params[0]) & 0xF;
 
-        instr_int += rs << 16;
+        instr_int |= rs << 20;
         instr_int |= 0x21 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1366,13 +1366,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
             callers.insert({val_str, pc});
             val = 0;
         } else {
-            val = param_to_int(params[0]);
+            val = param_to_int(params[0]) & 0xFFFFF;
         }
 
-        uint32_t rcond = param_to_int(params[1]);
+        uint32_t rcond = param_to_int(params[1]) & 0xF;
 
-        instr_int += val << 8;
-        instr_int += rcond;
+        instr_int |= val << 4;
+        instr_int |= rcond;
         instr_int |= 0x22 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1381,11 +1381,11 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "jumpifd") {
         // Arguments: rs, rcond
 
-        uint32_t rs = param_to_int(params[0]);
-        uint32_t rcond = param_to_int(params[1]);
+        uint32_t rs = param_to_int(params[0]) & 0xF;
+        uint32_t rcond = param_to_int(params[1]) & 0xF;
 
-        instr_int += rs << 16;
-        instr_int += rcond;
+        instr_int |= rs << 20;
+        instr_int |= rcond;
         instr_int |= 0x23 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1418,10 +1418,10 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
             callers.insert({val_str, pc});
             val = 0;
         } else {
-            val = param_to_int(params[0]);
+            val = param_to_int(params[0]) & 0xFFFFF;
         }
 
-        instr_int += val;
+        instr_int |= val;
         instr_int |= 0x26 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1439,39 +1439,39 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
             callers.insert({val_str, pc});
             val = 0;
         } else {
-            val = param_to_int(params[0]);
+            val = param_to_int(params[0]) & 0xFFFFF;
         }
 
-        uint32_t rcond = param_to_int(params[1]);
+        uint32_t rcond = param_to_int(params[1]) & 0xF;
 
-        instr_int += val << 8;
-        instr_int += rcond;
+        instr_int |= val << 4;
+        instr_int |= rcond;
         instr_int |= 0x27 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Branch If, val=" << val << ", rcond=" << rcond << " --> " << get_instr_as_hex(instr_int) << newl;
         }
-    } else if (instr == "stored") { // 0000_0100_16-bits-addr_8-bits-rs
+    } else if (instr == "stored") {
         // Arguments: addr, rs
 
-        uint32_t addr = param_to_int(params[0]);
-        uint32_t rs = param_to_int(params[1]);
+        uint32_t addr = param_to_int(params[0]) & 0xFFFFF;
+        uint32_t rs = param_to_int(params[1]) & 0xF;
 
-        instr_int += addr << 8;
-        instr_int += rs;
+        instr_int |= addr << 4;
+        instr_int |= rs;
         instr_int |= 0x04 << 24;
 
         if (DEBUG_LEVEL >= 0) {
             std::cout << "Store Direct, addr=" << addr << ", rs=" << rs << " --> " << get_instr_as_hex(instr_int) << newl;
         }
-    } else if (instr == "loadd") { // 0000_0101_8-bits-rd_16-bits-addr
+    } else if (instr == "loadd") {
         // Arguments: rd, addr
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t addr = param_to_int(params[1]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t addr = param_to_int(params[1]) & 0xFFFFF;
 
-        instr_int += rd << 16;
-        instr_int += addr;
+        instr_int |= rd << 20;
+        instr_int |= addr;
         instr_int |= 0x05 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1480,13 +1480,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "lshift") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x40 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1495,13 +1495,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "rshift") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x41 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1510,13 +1510,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "mul") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x12 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1525,13 +1525,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "div") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x13 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1540,13 +1540,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "and") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x30 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1555,13 +1555,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "or") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x31 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1570,13 +1570,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "nand") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x32 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1585,13 +1585,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "nor") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x33 << 24;
 
         if (DEBUG_LEVEL >= 0) {
@@ -1600,13 +1600,13 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
     } else if (instr == "xor") {
         // Arguments: rd, rs1, rs2
 
-        uint32_t rd = param_to_int(params[0]);
-        uint32_t rs1 = param_to_int(params[1]);
-        uint32_t rs2 = param_to_int(params[2]);
+        uint32_t rd = param_to_int(params[0]) & 0xF;
+        uint32_t rs1 = param_to_int(params[1]) & 0xF;
+        uint32_t rs2 = param_to_int(params[2]) & 0xF;
 
-        instr_int += rd << 16;
-        instr_int += rs1 << 8;
-        instr_int += rs2;
+        instr_int |= rd << 20;
+        instr_int |= rs1 << 16;
+        instr_int |= rs2 << 12;
         instr_int |= 0x34 << 24;
 
         if (DEBUG_LEVEL >= 0) {

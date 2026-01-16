@@ -45,8 +45,8 @@ stored 0x10C denom // for debug
 div /*ffff*/res n_fact denom
 stored/*fdsfdsfds*/ 0x110 res
 
-loadm 10 99999
-uloadm 11 99999
+loadm 10 999999
+uloadm 11 999999
 stored 0x114 10
 stored 0x118 11
 
