@@ -30,6 +30,7 @@ private:
 
     static void print_vmsi(std::vector<std::multimap<std::string, int>> vmsi);
     static void print_vuc(std::vector<unsigned char> vuc);
+    static bool create_out_dir_safely();
 };
 
 #endif

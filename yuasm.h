@@ -107,6 +107,7 @@ private:
     static std::string get_instr_as_hex(uint32_t instr_int);
     static uint32_t twos_complement(uint32_t val);
     static std::string generate_ofname(std::string fpath);
+    static bool create_objects_dir_safely();
 };
 
 #endif

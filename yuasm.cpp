@@ -11,8 +11,10 @@
 #include <map>
 #include <cmath>
 #include <iomanip>
+#include <filesystem>
 
 Yuasm::Yuasm(std::string first_fname) {
+    create_objects_dir_safely();
     ofname = generate_ofname(first_fname);
     if (open_new_file(first_fname)) {
         mainloop();
@@ -553,6 +555,11 @@ bool Yuasm::mainloop() {
                     
                     case QUOTE: {
                         std::string fpath(buffer0.begin(), buffer0.end());
+                        std::filesystem::path cur_fpath = fnames.top();
+                        std::filesystem::path parent_folder_path = cur_fpath.parent_path();
+                        parent_folder_path /= "";
+                        std::string folder_str = parent_folder_path.string();
+                        fpath = folder_str + fpath;
                         std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>(fpath);
                         if (!(*file)) {
                             print_line_to_std_err();
@@ -2026,4 +2033,9 @@ std::string Yuasm::generate_ofname(std::string fpath) {
     size_t last_dot_pos = fname.find_last_of('.');
     std::string fname_noext = (last_dot_pos == std::string::npos) ? fname : fname.substr(0, last_dot_pos);
     return fname_noext + ".o";
+}
+
+
+bool Yuasm::create_objects_dir_safely() {
+    return std::filesystem::create_directories("objects");
 }

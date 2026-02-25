@@ -1,1 +1,0 @@
-g++ yuasm_main.cpp yuasm.cpp yulinker.cpp -o yuasm

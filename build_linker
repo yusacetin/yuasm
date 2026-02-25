@@ -1,1 +1,0 @@
-g++ yulinker_main.cpp yulinker.cpp -o yulinker

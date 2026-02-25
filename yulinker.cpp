@@ -4,6 +4,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cstdint>
+#include <filesystem>
 
 using uint32_t = std::uint32_t;
 
@@ -12,6 +13,7 @@ Linker::Linker(std::vector<std::string> set_fpaths, bool set_standalone_mode) : 
     int no_of_files = fpaths.size();
     defs.resize(no_of_files);
     callers.resize(no_of_files);
+    create_out_dir_safely();
     link();
 }
 
@@ -357,7 +359,7 @@ bool Linker::write_binary() {
         print_vuc(instrs);
     }
 
-    std::ofstream bin_file("program.bin", std::ios::binary);
+    std::ofstream bin_file("out/program.bin", std::ios::binary);
 
     for (int i=0; i<instrs.size(); i++) {
         bin_file.write(reinterpret_cast<const char*>(&instrs[i]), sizeof(instrs[i]));
@@ -389,4 +391,8 @@ void Linker::print_vuc(std::vector<unsigned char> vuc) {
         }
     }
     std::cout << "\n";
+}
+
+bool Linker::create_out_dir_safely() {
+    return std::filesystem::create_directories("out");
 }
