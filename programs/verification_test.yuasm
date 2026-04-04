@@ -1,0 +1,525 @@
+.main:
+    br test_memory
+    br test_arithmetic
+    br test_control
+    br test_logical
+    br test_shift
+    br test_comparison
+    end
+
+.test_memory:
+    // uloadm and stored in-range value
+    uloadm 1 16
+    stored 0x8000 1 // should be 16
+
+    // uloadm and stored out-range value
+    uloadm 1 0x123456
+    stored 0x8004 1 // should be 0x23456
+
+    // loadm and stored unsigned value
+    loadm 1 16
+    stored 0x8008 1 // should be 16
+
+    // loadm and stored signed value
+    loadm 1 -16
+    stored 0x800C 1 // should be -16
+
+    // loadm and stored out-range unsigned value
+    loadm 1 0x123456
+    stored 0x8010 1 // should be 0x23456
+
+    // loadr and stored
+    loadm 1 0x23
+    stored 0x8014 1
+    loadm 3 0x8014
+    loadr 2 3
+    stored 0x8018 2 // should be 0x23
+
+    // loadm and storen
+    loadm 1 0x48
+    loadm 2 0x801C
+    storen 2 1 // 0x801C should be 0x48
+
+    // loadd and stored
+    loadm 1 0x4567
+    stored 0x8020 1
+    loadd 2 0x8020
+    stored 0x8024 2 // should be 0x4567
+
+    ret
+
+.test_arithmetic:
+    br test_add
+    br test_sub
+    br test_mul
+    br test_div
+    ret
+
+.test_add:
+    // Basic addition test
+    loadm 1 32
+    loadm 2 83
+    add 3 1 2
+    stored 0x9000 3 // should be 115
+
+    // Signed addition test 1
+    loadm 1 132
+    loadm 2 -44
+    add 3 1 2
+    stored 0x9004 3 // should be 88
+
+    // Signed addition test 2
+    loadm 1 -345
+    loadm 2 96
+    add 3 1 2
+    stored 0x9008 3 // should be -249
+
+    // Signed addition test 3
+    loadm 1 -8325
+    loadm 2 -1234
+    add 3 1 2
+    stored 0x900C 3 // should be -9559
+
+    ret
+
+.test_sub:
+    // Basic subtraction test
+    loadm 1 50
+    loadm 2 12
+    sub 3 1 2
+    stored 0x9010 3 // should be 38
+
+    // Signed subtraction test 1
+    loadm 1 -77
+    loadm 2 35
+    sub 3 1 2
+    stored 0x9014 3 // should be -112
+
+    // Signed subtraction test 2
+    loadm 1 48
+    loadm 2 -44
+    sub 3 1 2
+    stored 0x9018 3 // should be 92
+
+    // Signed subtraction test 3
+    loadm 1 -13
+    loadm 2 -87
+    sub 3 1 2
+    stored 0x901C 3 // should be 74
+
+    ret
+
+.test_mul:
+    // Basic multiplication test
+    loadm 1 92
+    loadm 2 72
+    mul 3 1 2
+    stored 0x9020 3 // should be 6624
+
+    // Signed multiplication test 1
+    loadm 1 23
+    loadm 2 -56
+    mul 3 1 2
+    stored 0x9024 3 // should be -1288
+
+    // Signed multiplication test 2
+    loadm 1 -33
+    loadm 2 26
+    mul 3 1 2
+    stored 0x9028 3 // should be -858
+
+    // Signed multiplication test 3
+    loadm 1 -67
+    loadm 2 -132
+    mul 3 1 2
+    stored 0x902C 3 // should be 8844
+
+    ret
+
+.test_div:
+    // Divisible division test
+    loadm 1 52
+    loadm 2 13
+    div 3 1 2
+    stored 0x9030 3 // should be 4
+
+    // Signed divisible division test 1
+    loadm 1 -52
+    loadm 2 13
+    div 3 1 2
+    stored 0x9034 3 // should be -4
+
+    // Signed divisible division test 2
+    loadm 1 52
+    loadm 2 -13
+    div 3 1 2
+    stored 0x9038 3 // should be -4
+
+    // Signed divisible division test 3
+    loadm 1 -35
+    loadm 2 -7
+    div 3 1 2
+    stored 0x903C 3 // should be 5
+
+    // Non divisible division test
+    loadm 1 96
+    loadm 2 14
+    div 3 1 2
+    stored 0x9040 3 // should be 6
+
+    // Signed non divisible division test
+    loadm 1 -96
+    loadm 2 14
+    div 3 1 2
+    stored 0x9044 3 // should be -6
+
+    // Signed non divisible division test 2
+    loadm 1 96
+    loadm 2 -14
+    div 3 1 2
+    stored 0x9048 3 // should be -6
+
+    // Signed non divisible division test 3
+    loadm 1 -96
+    loadm 2 -14
+    div 3 1 2
+    stored 0x904C 3 // should be 6
+
+    ret
+
+.test_control:
+    // jump
+    jump dummy_jump_that_loads_0x33_to_r1
+    .return_section_for_dummy_jump:
+    stored 0xA000 1 // should be 0x33
+
+    // jumpd
+    loadm 2 0x44
+    loadm 1 8 // 4 bytes = 1 instruction so to skip to the instruction after the next one we need to skip 8 bytes
+    jumpd 1
+    stored 0xA000 2 // this will be skipped
+    // 0xA000 should still be 0x33
+
+    // jumpif (true)
+    loadm 2 1
+    jumpif jumpif_true_test_jump 2
+    .jumpif_true_test_jump_return:
+    stored 0xA004 1 // should be 0x55
+
+    // jumpif (false)
+    loadm 2 0
+    jumpif jumpif_false_test_jump 2
+    .jumpif_false_test_jump_return:
+    stored 0xA004 1 // should still be 0x55
+
+    // jumpifd (true)
+    loadm 1 0x77
+    stored 0xA008 1
+    loadm 4 0x88
+    loadm 2 1
+    loadm 3 8
+    jumpifd 3 2
+    stored 0xA008 4 // should be skipped
+    // 0xA008 should be 0x77
+
+    // jumpifd (false)
+    loadm 2 0
+    loadm 3 8
+    jumpifd 3 2
+    stored 0xA00C 4 // should be 0x88
+
+    // ret, br, and end are tested thought the runtime of the program
+
+    // brif (true)
+    loadm 1 1
+    brif brif_test_store_0x99_at_0xA010 1
+    // now 0xA010 should be 0x99
+
+    // brif (false)
+    loadm 1 0
+    brif brif_test_store_0x111_at_0xA010 1
+    // 0xA010 should still be 0x99
+    
+    ret
+
+.dummy_jump_that_loads_0x33_to_r1:
+    loadm 1 0x33
+    jump return_section_for_dummy_jump
+
+.increment_r1:
+    loadm 2 1
+    add 1 2 1
+    ret
+
+.jumpif_true_test_jump:
+    loadm 1 0x55
+    jump jumpif_true_test_jump_return
+
+.jumpif_false_test_jump:
+    loadm 1 0x66
+    jump jumpif_false_test_jump_return
+
+.brif_test_store_0x99_at_0xA010:
+    loadm 1 0x99
+    stored 0xA010 1
+    ret
+
+.brif_test_store_0x111_at_0xA010:
+    loadm 1 0x99
+    stored 0xA010 1
+    ret
+
+.test_logical:
+    // and (0, 0)
+    loadm 1 0
+    loadm 2 0
+    and 3 1 2
+    stored 0xB000 3 // should be zero
+
+    // and (0, 1)
+    loadm 1 0
+    loadm 2 1
+    and 3 1 2
+    stored 0xB004 3 // should be zero
+
+    // and (1, 0)
+    loadm 1 1
+    loadm 2 0
+    and 3 1 2
+    stored 0xB008 3 // should be zero
+
+    // and (1, 1)
+    loadm 1 1
+    loadm 2 1
+    and 3 1 2
+    stored 0xB00C 3 // should be 1
+
+    // or (0, 0)
+    loadm 1 0
+    loadm 2 0
+    or 3 1 2
+    stored 0xB010 3 // should be zero
+
+    // or (0, 1)
+    loadm 1 0
+    loadm 2 1
+    or 3 1 2
+    stored 0xB014 3 // should be 1
+
+    // or (1, 0)
+    loadm 1 1
+    loadm 2 0
+    or 3 1 2
+    stored 0xB018 3 // should be 1
+
+    // or (1, 1)
+    loadm 1 1
+    loadm 2 1
+    or 3 1 2
+    stored 0xB01C 3 // should be 1
+
+    // logical operators work on all bits
+
+    // nand (0, 0)
+    loadm 1 0
+    loadm 2 0
+    nand 3 1 2
+    stored 0xB020 3 // should be 0xFFFFFFFF
+
+    // nand (0, 1)
+    loadm 1 0
+    loadm 2 1
+    nand 3 1 2
+    stored 0xB024 3 // should be 0xFFFFFFFF
+
+    // nand (1, 0)
+    loadm 1 1
+    loadm 2 0
+    nand 3 1 2
+    stored 0xB028 3 // should be 0xFFFFFFFF
+
+    // nand (1, 1)
+    loadm 1 1
+    loadm 2 1
+    nand 3 1 2
+    stored 0xB02C 3 // should be 0xFFFFFFFE
+
+    // nor (0, 0)
+    loadm 1 0
+    loadm 2 0
+    nor 3 1 2
+    stored 0xB030 3 // should be 0xFFFFFFFF
+
+    // nor (0, 1)
+    loadm 1 0
+    loadm 2 1
+    nor 3 1 2
+    stored 0xB034 3 // should be 0xFFFFFFFE
+
+    // nor (1, 0)
+    loadm 1 1
+    loadm 2 0
+    nor 3 1 2
+    stored 0xB038 3 // should be 0xFFFFFFFE
+
+    // nor (1, 1)
+    loadm 1 1
+    loadm 2 1
+    nor 3 1 2
+    stored 0xB03C 3 // should be 0xFFFFFFFE
+
+    // xor (0, 0)
+    loadm 1 0
+    loadm 2 0
+    xor 3 1 2
+    stored 0xB040 3 // should be zero
+
+    // xor (0, 1)
+    loadm 1 0
+    loadm 2 1
+    xor 3 1 2
+    stored 0xB044 3 // should be 1
+
+    // xor (1, 0)
+    loadm 1 1
+    loadm 2 0
+    xor 3 1 2
+    stored 0xB048 3 // should be 1
+
+    // xor (1, 1)
+    loadm 1 1
+    loadm 2 1
+    xor 3 1 2
+    stored 0xB04C 3 // should be zero
+
+.test_shift:
+    // lshift (positive number)
+    loadm 1 0x3456
+    loadm 2 4
+    lshift 3 1 2
+    stored 0xC000 3 // should be 0x34560
+
+    // lshift (negative number)
+    loadm 1 -0x3456
+    loadm 2 4
+    lshift 3 1 2
+    stored 0xC004 3 // should be 0xFFFCBAA0
+
+    // rshift (positive number)
+    loadm 1 0x3456
+    loadm 2 4
+    rshift 3 1 2
+    stored 0xC008 3 // should be 0x345
+
+    // rshift (negative number)
+    loadm 1 -0x3456
+    loadm 2 4
+    rshift 3 1 2
+    stored 0xC00C 3 // should be 0xFFFFFCBA
+
+    ret
+
+.test_comparison:
+    // lt (true)
+    loadm 1 5
+    loadm 2 6
+    lt 3 1 2
+    stored 0xD000 3 // should be 1
+
+    // lt (false)
+    loadm 1 5
+    loadm 2 4
+    lt 3 1 2
+    stored 0xD004 3 // should be 0
+
+    // lt (true) (negative number)
+    loadm 1 -5
+    loadm 2 6
+    lt 3 1 2
+    stored 0xD008 3 // should be 1
+
+    // lt (false) (negative number)
+    loadm 1 5
+    loadm 2 -6
+    lt 3 1 2
+    stored 0xD00C 3 // should be 0
+
+    // gt (true)
+    loadm 1 6
+    loadm 2 5
+    gt 3 1 2
+    stored 0xD010 3 // should be 1
+
+    // gt (false)
+    loadm 1 4
+    loadm 2 5
+    gt 3 1 2
+    stored 0xD014 3 // should be 0
+
+    // gt (true) (negative number)
+    loadm 1 5
+    loadm 2 -6
+    gt 3 1 2
+    stored 0xD018 3 // should be 1
+
+    // gt (false) (negative number)
+    loadm 1 -5
+    loadm 2 6
+    gt 3 1 2
+    stored 0xD01C 3 // should be 0
+
+    // lte (true for lt)
+    loadm 1 -3
+    loadm 2 -2
+    lte 3 1 2
+    stored 0xD020 3 // should be 1
+
+    // lte (true for eq)
+    loadm 1 -3
+    loadm 2 -3
+    lte 3 1 2
+    stored 0xD024 3 // should be 1
+
+    // lte (false)
+    loadm 1 -2
+    loadm 2 -3
+    lte 3 1 2
+    stored 0xD028 3 // should be 0
+
+    // gte (true for gt)
+    loadm 1 6
+    loadm 2 3
+    gte 3 1 2
+    stored 0xD030 3 // should be 1
+
+    // gte (true for eq)
+    loadm 1 6
+    loadm 2 6
+    gte 3 1 2
+    stored 0xD034 3 // should be 1
+
+    // gte (false)
+    loadm 1 -7
+    loadm 2 2
+    gte 3 1 2
+    stored 0xD038 3 // should be 0
+
+    // eq (true)
+    loadm 1 9
+    loadm 2 9
+    eq 3 1 2
+    stored 0xD040 3 // should be 1
+
+    // eq (true) (negative number)
+    loadm 1 -3
+    loadm 2 -3
+    eq 3 1 2
+    stored 0xD044 3 // should be 1
+
+    // eq (false)
+    loadm 1 2
+    loadm 2 3
+    eq 3 1 2
+    stored 0xD048 3 // should be 0
+
+    ret
