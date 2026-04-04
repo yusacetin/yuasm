@@ -27,28 +27,28 @@ br init// yooo
 add        fact_arg,n zero // to copy registers
 br factorial
 add/* hello*/ n_fact fact_res zero   ; /* jk hnjklhjkn mnkmn */
-stored 0x100 fact_res // for debug
+stored 0x8100 fact_res // for debug
 
 add fact_arg n_minus_r ,zero
 br factorial/*hello*/
 add n_minus_r_fact, fact_res , zero
-stored 0x104 fact_res // for debug
+stored 0x8104 fact_res // for debug
 
 add /* hello */ fact_arg r zero
 br factorial
 add r_fact /*asdf*//* hellllllooooooo*/ fact_res /* does this work fds */   zero
-stored 0x108 fact_res // for debug
+stored 0x8108 fact_res // for debug
 
 mul denom r_fact n_minus_r_fact//hello
-stored 0x10C denom // for debug
+stored 0x810C denom // for debug
 
 div /*ffff*/res n_fact denom
-stored/*fdsfdsfds*/ 0x110 res
+stored/*fdsfdsfds*/ 0x8110 res
 
 loadm 10 999999
 uloadm 11 999999
-stored 0x114 10
-stored 0x118 11
+stored 0x8114 10
+stored 0x8118 11
 
 end;//hello
 

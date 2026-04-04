@@ -1,6 +1,6 @@
-#define d 200
-#define e 201
-#define f 202
+#define d 7
+#define e 8
+#define f 9
 
 .my_mul:
 mul d e f

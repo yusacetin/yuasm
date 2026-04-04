@@ -4,7 +4,7 @@
 #define one 3
 #define cond 4
 #define final_res 5
-#define final_res_val 0x0100
+#define final_res_val 0x8000
 
 .main:
 loadm res 0 // result starts as zero

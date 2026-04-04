@@ -11,9 +11,9 @@
 #define one 10
 
 // constant address values
-#define num0_addr_val 0x0100
-#define num1_addr_val 0x0104
-#define num2_addr_val 0x0108
+#define num0_addr_val 0x8100
+#define num1_addr_val 0x8104
+#define num2_addr_val 0x8108
 
 // initialize constants
 loadm four 4
@@ -46,4 +46,3 @@ add counter counter one
 // check end condition (loop if counter < limit)
 lt cond counter limit
 jumpif loop cond
-

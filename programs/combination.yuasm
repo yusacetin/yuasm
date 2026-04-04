@@ -23,23 +23,23 @@ br init
 add fact_arg n zero // to copy registers
 br factorial
 add n_fact fact_res zero
-stored 0x100 fact_res // for debug
+stored 0x8100 fact_res // for debug
 
 add fact_arg n_minus_r zero
 br factorial
 add n_minus_r_fact fact_res zero
-stored 0x104 fact_res // for debug
+stored 0x8104 fact_res // for debug
 
 add fact_arg r zero
 br factorial
 add r_fact fact_res zero
-stored 0x108 fact_res // for debug
+stored 0x8108 fact_res // for debug
 
 mul denom r_fact n_minus_r_fact
-stored 0x10C denom // for debug
+stored 0x810C denom // for debug
 
 div res n_fact denom
-stored 0x110 res
+stored 0x8110 res
 
 end
 
