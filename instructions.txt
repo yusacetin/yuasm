@@ -1,11 +1,12 @@
 Legend
 ------
-The most significant 4 bits of any instruction denote the instruction category, and the next 4 bits denote the instruction identifier. The most significant byte thus contains the opcode.
+The most significant 4 bits of any instruction denote the instruction category, and the next 4 bits denote the instruction identifier. The most significant byte thus comprises the opcode. By convention names beginning with 'r' represent registers that contain the related information.
 r[i]: value at register number i
 m[i]: value at address i
-names beginning with r represent registers that contain the related info
 rd: destination register
 rs: source register
+raddr: address register
+addr: memory address
 'm' at the end of an instruction name stands for iMmediate
 'd' at the end of an instruction name stands for Direct
 'r' at the end of an instruction name stands for Register indirect
@@ -41,14 +42,14 @@ Note: "val" in jump, jumpif, br, and brif should only be function/section names.
 jump val: pc += val --> 0010_0000_24-bits-val
 jumpd rs: pc += r[rs] --> 0010_0001_4-bits-rs_20-bits-skip
 
-jumpif val rcond: pc += val if r[rcond] > 0 --> 0010_0010_20-bits-val_4-bits-rcond
-jumpifd rs rcond: pc += r[rs] if r[rcond] > 0 --> 0010_0011_4-bits-rs_16-bits-skip_4-bits-rcond
+jumpif val rcond: pc += val if r[rcond] != 0 --> 0010_0010_20-bits-val_4-bits-rcond
+jumpifd rs rcond: pc += r[rs] if r[rcond] != 0 --> 0010_0011_4-bits-rs_16-bits-skip_4-bits-rcond
 
 ret: return to caller --> 0010_0100_24-bits-skip
 end: infinite self loop --> 0010_0101_24-bits-skip
 
 br val: pc += val, push return addr to stack --> 0010_0110_24-bits-val
-brif val rcond: pc += val if r[rcond] > 0, push return addr to stack --> 0010_0111_20-bits-val_4-bits-rcond
+brif val rcond: pc += val if r[rcond] != 0, push return addr to stack --> 0010_0111_20-bits-val_4-bits-rcond
 
 
 Logical (category 0x3)
@@ -66,15 +67,15 @@ xor rd rs1 rs2: r[rd] = r[rs1] ^ r[rs2] --> 0011_0100_4-bits-rd_4-bits-rs1_4-bit
 Shift (category 0x4)
 --------------------
 
-lshift rd rs1 rs2: r[rd] = r[rs1] << r[rs2] --> 0001_0000_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
-rshift rd rs1 rs2: r[rd] = r[rs1] >> r[rs2] --> 0001_0001_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+lshift rd rs1 rs2: r[rd] = r[rs1] << r[rs2] --> 0100_0000_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+rshift rd rs1 rs2: r[rd] = r[rs1] >> r[rs2] --> 0100_0001_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
 
 
 Comparison (category 0x5)
 -------------------------
 
-lt rd rs1 rs2: r[rd] = r[rs1] < r[rs2] --> 0001_0000_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
-lte rd rs1 rs2: r[rd] = r[rs1] <= r[rs2] --> 0001_0001_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
-gt rd rs1 rs2: r[rd] = r[rs1] > r[rs2] --> 0001_0010_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
-gte rd rs1 rs2: r[rd] = r[rs1] >= r[rs2] --> 0001_0011_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
-eq rd rs1 rs2: r[rd] = r[rs1] == r[rs2] --> 0001_0100_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+lt rd rs1 rs2: r[rd] = r[rs1] < r[rs2] --> 0101_0000_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+lte rd rs1 rs2: r[rd] = r[rs1] <= r[rs2] --> 0101_0001_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+gt rd rs1 rs2: r[rd] = r[rs1] > r[rs2] --> 0101_0010_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+gte rd rs1 rs2: r[rd] = r[rs1] >= r[rs2] --> 0101_0011_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
+eq rd rs1 rs2: r[rd] = r[rs1] == r[rs2] --> 0101_0100_4-bits-rd_4-bits-rs1_4-bits-rs2_12-bits-skip
