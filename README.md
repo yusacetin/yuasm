@@ -1,6 +1,6 @@
 # YuASM
 
-An assembler I'm working on for fun for a fictional ISA. Programs can be run with [Yuemu](https://github.com/yusacetin/yuemu). It's still a work in progress and there are some known issues. For example, the last instruction isn't read if there isn't a trailing new line character after it.
+An assembler I'm working on for fun for a fictional ISA. Programs can be run with [Yuemu](https://github.com/yusacetin/yuemu).
 
 ## System Overview
 

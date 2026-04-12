@@ -23,21 +23,26 @@ Yuasm::Yuasm(std::string first_fname) {
 
 bool Yuasm::mainloop() {
     while (!files.empty()) {
-        // Quit the program if all files are scanned
-        // TODO there's a serious problem with state switching after EOF
-        if ((*(files.top())).eof()) {
-            buffer0.clear();
-            buffer1.clear();
-            params.clear();
-            files.pop();
-            fnames.pop();
-            line_counters.pop();
-            continue;
-        }
-
         // Get the next character in line
         char ch;
         (*(files.top())).get(ch);
+
+        // If EOF is reached and an instruction is currently being read, trigger an instruction processing cycle by emulating an EOL character,
+        // otherwise the last instruction isn't processed.
+        // If no instruction is in the buffer quit the program.
+        if ((*(files.top())).eof()) {
+            if ((!buffer0.empty() || !buffer1.empty()) && state != BLOCK_COMMENT && state != BLOCK_COMMENT_END) {
+                ch = '\n';
+            } else {
+                buffer0.clear();
+                buffer1.clear();
+                params.clear();
+                files.pop();
+                fnames.pop();
+                line_counters.pop();
+                continue;
+            }
+        }
 
         int category = get_category(ch);
 
