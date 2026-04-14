@@ -2,19 +2,19 @@
 #define b 1
 #define c 2
 
-.init:
-loadm a 5
-loadm b 6
-loadm c 0
-ret
-
 .main:
-br init
-add c a b
-stored 0x8100 c
-loadm 7 0
-loadm 8 7
-loadm 9 8
-br my_mul
-stored 0x8104 7
-end
+    br init
+    add c a b
+    stored 0x8100 c
+    loadm 7 0
+    loadm 8 7
+    loadm 9 8
+    br my_mul
+    stored 0x8104 7
+    end
+
+.init:
+    loadm a 5
+    loadm b 6
+    loadm c 0
+    ret

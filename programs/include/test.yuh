@@ -1,4 +1,4 @@
 .imported_function:
-loadm 0 8
-stored 0x8200 0
-ret
+    loadm 0 8
+    stored 0x8200 0
+    ret

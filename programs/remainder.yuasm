@@ -7,8 +7,6 @@
 #define mul_res 3
 #define res 4
 
-.main:
-
 loadm a a_val
 loadm b b_val
 
@@ -17,4 +15,3 @@ mul mul_res div_res b
 
 sub res a mul_res
 stored 0x8000 res
-

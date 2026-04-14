@@ -3,6 +3,5 @@
 #define f 9
 
 .my_mul:
-mul d e f
-ret
-
+    mul d e f
+    ret

@@ -18,47 +18,46 @@
 #define fact_cond 203
 
 .main:
-br init
+    br init
 
-add fact_arg n zero // to copy registers
-br factorial
-add n_fact fact_res zero
-stored 0x8100 fact_res // for debug
+    add fact_arg n zero // to copy registers
+    br factorial
+    add n_fact fact_res zero
+    stored 0x8100 fact_res // for debug
 
-add fact_arg n_minus_r zero
-br factorial
-add n_minus_r_fact fact_res zero
-stored 0x8104 fact_res // for debug
+    add fact_arg n_minus_r zero
+    br factorial
+    add n_minus_r_fact fact_res zero
+    stored 0x8104 fact_res // for debug
 
-add fact_arg r zero
-br factorial
-add r_fact fact_res zero
-stored 0x8108 fact_res // for debug
+    add fact_arg r zero
+    br factorial
+    add r_fact fact_res zero
+    stored 0x8108 fact_res // for debug
 
-mul denom r_fact n_minus_r_fact
-stored 0x810C denom // for debug
+    mul denom r_fact n_minus_r_fact
+    stored 0x810C denom // for debug
 
-div res n_fact denom
-stored 0x8110 res
+    div res n_fact denom
+    stored 0x8110 res
 
-end
+    end
 
 .init:
-loadm n n_val
-loadm r r_val
-loadm n_minus_r 0
-sub n_minus_r n r
-loadm one 1
-loadm zero 0
-ret
+    loadm n n_val
+    loadm r r_val
+    loadm n_minus_r 0
+    sub n_minus_r n r
+    loadm one 1
+    loadm zero 0
+    ret
 
 .factorial:
-loadm fact_res 1
-add fact_cur fact_arg zero
-.fact_loop:
-mul fact_res fact_res fact_cur
-sub fact_cur fact_cur one
-gt fact_cond fact_cur one
-jumpif fact_loop fact_cond
-ret
-
+    loadm fact_res 1
+    add fact_cur fact_arg zero
+    .fact_loop:
+    mul fact_res fact_res fact_cur
+    sub fact_cur fact_cur one
+    gt fact_cond fact_cur one
+    jumpif fact_loop fact_cond
+    ret

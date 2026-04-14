@@ -70,4 +70,3 @@ sub fact_cur fact_cur one
 gt fact_cond fact_cur one
 jumpif fact_loop fact_cond
 ret // hello
-
