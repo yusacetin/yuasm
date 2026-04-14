@@ -394,7 +394,7 @@ The `yuasm` binary generates object files that contain both the instructions and
 
 ### Object file structure
 
-Symbol information is provided at the beginning of the object file. Object files from beginning to end follow this order:
+Symbol information is provided at the beginning of the object file. Object files from beginning to end follow this structure:
 
 * (32 bits) Number of symbol definitions
 * For each symbol:
