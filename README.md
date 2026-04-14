@@ -388,7 +388,27 @@ Syntax: `eq rd rs1 rs2`
 
 Operation: `r[rd] = (r[rs1] == r[rs2]) ? 1 : 0`
 
-### Examples
+## Linker
+
+The `yuasm` binary generates object files that contain both the instructions and information about symbol (i.e. function) locations. `yuasm` then calls the `Linker` class declared in `yulinker.h` to perform linking. If all files containing symbol definitions used by the program are included with the `#include` macro in the source file there is no need to build and use `yulinker` separately. If there are unresolved symbols that need to be loaded from other files, automatic linking fails and the linker must be called manually with all required input files. In this case, simply call `build_linker.sh` to get the `yulinker` binary and call it with all the object files that contain symbol definitions used by your program. Provide object file paths as command line arguments, they will be concatenated in the order they are given.
+
+### Object file structure
+
+Symbol information is provided at the beginning of the object file. Object files from beginning to end follow this order:
+
+* (32 bits) Number of symbol definitions
+* For each symbol:
+* * (16 bits) Length of the symbol name in bytes
+* * (varying size) Symbol name
+* * (32 bits) Symbol location in program
+* (32 bits) Number of callers
+* For each caller:
+* * (16 bits) Length of the symbol name in bytes
+* * (varying size) Symbol name
+* * (32 bits) Location of the instruction that is calling the symbol
+* (varying size) Instructions
+
+## Examples
 
 See the `.yuasm` files under the `programs` directory for some examples.
 
