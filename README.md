@@ -398,14 +398,14 @@ Symbol information is provided at the beginning of the object file. Object files
 
 * (32 bits) Number of symbol definitions
 * For each symbol:
-* * (16 bits) Length of the symbol name in bytes
-* * (varying size) Symbol name
-* * (32 bits) Symbol location in program
+  * (16 bits) Length of the symbol name in bytes
+  * (varying size) Symbol name
+  * (32 bits) Symbol location in program
 * (32 bits) Number of callers
 * For each caller:
-* * (16 bits) Length of the symbol name in bytes
-* * (varying size) Symbol name
-* * (32 bits) Location of the instruction that is calling the symbol
+  * (16 bits) Length of the symbol name in bytes
+  * (varying size) Symbol name
+  * (32 bits) Location of the instruction that is calling the symbol
 * (varying size) Instructions
 
 ## Examples
