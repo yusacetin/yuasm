@@ -1632,10 +1632,14 @@ bool Yuasm::eval_instr(std::string instr, std::vector<std::string> params) {
 }
 
 bool Yuasm::open_new_file(std::string fname) {
+    if (!std::filesystem::exists(fname)) {
+        std::cerr << "Error: file not found" << newl;
+        return false;
+    }
     std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>(fname);
     if (!(*file)) {
         print_line_to_std_err();
-        std::cerr << "Error: file not found" << std::endl;
+        std::cerr << "Error: file not found" << newl;
         return false;
     }
     files.push(std::move(file));
