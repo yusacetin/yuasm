@@ -30,7 +30,7 @@ bool Linker::link() {
         return false;
     }
 
-    std::cout << "Created program binary\n";
+    std::cout << "Created program binary at out/program.bin\n";
     return true;
 }
 
